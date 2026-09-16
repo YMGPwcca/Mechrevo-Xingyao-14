@@ -1,12 +1,8 @@
-# Linux notes
+# Linux platform interfaces
 
-The researched Xingyao 14 / `P916F-STX` has been used primarily with **CachyOS / Arch-family Linux**.
+This page documents Linux-visible interfaces that are relevant to the P916F-STX hardware and firmware. General desktop configuration and installation history are intentionally excluded.
 
-This document records laptop-specific behavior rather than general Linux installation instructions.
-
-## Machine identity visible to Linux / platform identity
-
-The retained platform identity is:
+## Platform identity
 
 ```text
 MECHREVO XINGYAO Series-P916F-STX
@@ -14,37 +10,27 @@ AMD Ryzen AI 9 365
 Radeon 880M
 ```
 
-The CPU name used throughout this repository is AMD's official model name: `Ryzen AI 9 365`.
+## Power-supply devices
 
-The internal panel on this unit was previously observed as:
-
-```text
-2880 × 1800
-```
-
-A previously documented `1920×1080 @ 144 Hz` value belonged to another machine/context and was removed during the documentation audit. No refresh-rate value is currently retained here with enough confidence to publish as a P916F-STX fact.
-
-## Battery and AC devices
-
-The battery is exposed as:
+Battery:
 
 ```text
 /sys/class/power_supply/LCBT
 ```
 
-The AC adapter is exposed as:
+AC adapter:
 
 ```text
 /sys/class/power_supply/ACAD
 ```
 
-Retained battery model string:
+Battery model:
 
 ```text
 588974-3S-G-A0
 ```
 
-Useful battery attributes observed include:
+Observed battery attributes include:
 
 ```text
 capacity
@@ -54,34 +40,11 @@ power_now
 energy_now
 ```
 
-`current_now` was not present in the observed sysfs device.
+`current_now` was not present on the documented system.
 
-Representative capped state with AC connected:
+## Generic charge-control ABI
 
-```text
-capacity   = 79%
-status     = Not charging
-power_now  = 0
-energy_now = 63154000
-ACAD       = online=1
-```
-
-During the later load test the battery changed to:
-
-```text
-78%
-Charging
-power_now  = 28128000
-energy_now = 62661000
-```
-
-after a five-minute all-CPU stress interval.
-
-The charge-limit experiment and interpretation of these values are documented in [`battery-charge-limit.md`](battery-charge-limit.md).
-
-## Missing generic Linux charge-limit controls
-
-The `LCBT` power-supply device did not expose:
+The battery device does not expose:
 
 ```text
 charge_control_start_threshold
@@ -89,98 +52,53 @@ charge_control_end_threshold
 charge_behaviour
 ```
 
-The platform also had a `huawei-wmi` device, but it did not expose usable battery-charge attributes.
+A `huawei-wmi` platform device is present, but it does not expose a working battery charge-threshold interface for this machine.
 
-Therefore stock Linux does not currently surface the P916F charge-limit feature through the generic power-supply threshold ABI.
+The validated charge-limit implementation is therefore not available through the generic Linux power-supply ABI. It is implemented by the EC and reached through ITE PMC2. See [`battery-charge-limit.md`](battery-charge-limit.md).
 
-## ACPI / EC behavior
+## ACPI EC and H2RAM
 
-Linux sees a conventional ACPI battery device, while the firmware also exposes an EC shared-memory region at physical address:
+The DSDT declares a 256-byte EC-backed SystemMemory region:
 
 ```text
-0xFEEC2300
+OperationRegion (ERAM, SystemMemory, 0xFEEC2300, 0x100)
 ```
 
-The DSDT declares it as a 256-byte `SystemMemory` operation region. Static EC analysis maps it to:
+Static EC analysis maps this region to:
 
 ```text
+host 0xFEEC2300..0xFEEC23FF
+  <->
 EC XRAM 0x0300..0x03FF
 ```
 
-This memory window is distinct from the ordinary ACPI EC byte interface and from the ITE PMC2 command interface.
+This H2RAM window is distinct from the conventional ACPI EC I/O interface and from PMC2.
 
-The working battery-cap host path is ITE PMC2:
+## ITE PMC2
 
-```text
-DATA            0x68
-COMMAND/STATUS  0x6C
-```
-
-## Headless / lid behavior
-
-For headless use, systemd-logind can be configured not to suspend when the lid closes.
-
-The researched installation used an override equivalent to:
+The active PMC2 interface is:
 
 ```text
-[Login]
-HandleLidSwitch=ignore
-HandleLidSwitchExternalPower=ignore
-HandleLidSwitchDocked=ignore
+DATA            = 0x68
+COMMAND/STATUS  = 0x6C
 ```
 
-The effective configuration was checked with:
+It was confirmed through live Super-I/O configuration-space reads and subsequently used for the battery-limit command family.
+
+## Lid reporting
+
+ACPI exposes a standard lid device with `_HID = PNP0C0D`. `_LID` reads the EC-backed `LIDS` state, and EC query `_Q81` issues `Notify (LID, 0x80)` on lid-state changes.
+
+OS policy for suspend-on-lid-close is separate from this firmware reporting path.
+
+## Audio exposure
+
+Linux detects the internal analog codec as:
 
 ```text
-systemd-analyze cat-config systemd/logind.conf
+Realtek ALC256 Analog
 ```
 
-This is purely an OS policy. It does not change the firmware's physical lid signal or the ACPI `_LID` implementation.
+The speaker endpoint is exposed as stereo FL/FR. No separate LFE or four-channel logical endpoint has been observed.
 
-## BGRT observation after BIOS 1.15
-
-Linux exposed the post-update ACPI BGRT metadata:
-
-```text
-status  0
-type    0
-version 1
-xoffset 1040
-yoffset 387
-```
-
-The `xoffset=1040` value is geometrically consistent with an 800-pixel-wide centered image on the observed 2880-pixel-wide internal panel. See [`firmware-bios.md`](firmware-bios.md).
-
-## Graphics / Wayland
-
-The integrated Radeon graphics stack has been used successfully under Wayland/Hyprland on CachyOS.
-
-No P916F-specific graphics workaround has emerged from the firmware work described in this repository.
-
-## Power profiles
-
-The machine has been used with Linux AMD-pstate / `powerprofilesctl` profiles such as:
-
-```text
-performance
-balanced
-power-saver
-```
-
-These CPU/platform power-policy profiles are independent from the EC's battery charge-limit state.
-
-## Audio
-
-Linux audio works through ALSA/PipeWire. The internal codec path is Realtek ALC256 Analog, and PipeWire exposes ordinary stereo FL/FR speaker channels. The missing piece compared with Windows is primarily OEM Nahimic/A-Volute processing/tuning rather than basic codec detection. See [`audio.md`](audio.md).
-
-## Bluetooth / Wi-Fi observation
-
-On one Linux installation the wireless stack used Realtek `8852AU` firmware (`rtl8852au_fw.bin.zst`). A temporary Bluetooth headphone stutter was observed and stopped after toggling Wi-Fi.
-
-This remains an installation/runtime observation rather than a diagnosed P916F hardware defect.
-
-## Linux integration status
-
-No upstream Linux driver is currently known from this investigation to expose the machine's EC charge limit as standard power-supply threshold files.
-
-The protocol is documented well enough for future driver/userspace work, but this repository intentionally remains **documentation-only**.
+See [`audio.md`](audio.md).
