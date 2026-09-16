@@ -167,6 +167,50 @@ BootGraphicsResourceTableDxe
 GUID: B8E62775-BB0A-43F0-A843-5BE8B14F8CCD
 ```
 
+## Logo-only update research landmarks
+
+The detailed analysis is in [`boot-logo-research.md`](boot-logo-research.md). The important machine-specific static landmarks are preserved here so they are not lost when reproducing the work.
+
+### Type-54 / `-edt4f` callback
+
+The relevant callback in the exact P916F BIOS was located at:
+
+```text
+module:          ChipsetSvcSmm
+protocol slot:   +0xA8
+callback RVA:    0x221C
+```
+
+The callback compares the requested type against `0x50`; values that do not take that implemented branch return `EFI_UNSUPPORTED`. The examined Type-54 raw-logo route is therefore not implemented by this callback.
+
+### Type-6D target provisioning
+
+The authenticated generic logo-update path expects target GUID:
+
+```text
+DACFAB69-F977-4784-8AD8-7724A6F4B440
+```
+
+The raw ROM contains an `HFDM` / firmware device map at:
+
+```text
+raw-ROM offset: 0x1D7C000
+entries scanned: 47
+```
+
+The target GUID above was **not present** in those 47 entries.
+
+The same GUID was also absent from the Windows ESRT observed on the researched machine.
+
+These are different forms of evidence:
+
+```text
+raw-ROM FDM absence -> static provisioning evidence
+Windows ESRT absence -> live exposed-resource evidence
+```
+
+Together they strongly support the conclusion that the generic Type-6D logo component is not provisioned on this BIOS 1.15 build.
+
 ## SetupUtility identifiers
 
 ```text
@@ -179,6 +223,16 @@ Boot formset GUID:
 SystemConfig VarStore GUID used by Quiet Boot:
 A04A27F4-DF00-4D42-B552-39511302113D
 ```
+
+Runtime evidence retained from the BIOS investigation includes:
+
+```text
+Setup[0x6E] = 0x01
+```
+
+for Quiet Boot at the time of the test.
+
+A successful Smokeless Runtime EFI Patcher (SREP) session was also photographed during the experiment, followed by a BIOS Boot page showing the normally suppressed Boot settings. This is runtime evidence only; no permanent SetupUtility binary patch was written as part of that reveal.
 
 ## WMI Binary MOF
 
@@ -202,6 +256,7 @@ When adding a new low-level claim, record at minimum:
 - source file name;
 - source SHA-256 when available;
 - whether offsets refer to update-package layout or raw flash layout;
+- whether an address is a file offset, PE RVA, EC code address, XRAM address or host I/O/MMIO address;
 - whether the result is Live-confirmed, Static-confirmed, Inferred, Comparative only, or Rejected/Superseded.
 
 This prevents an address or conclusion from one firmware container or machine family from silently becoming a false "P916F-STX fact."
