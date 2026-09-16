@@ -1,118 +1,174 @@
 # Evidence matrix
 
-Validation status for machine-specific technical claims.
+This matrix is the claim-level index for the documented MECHREVO Xingyao 14 / `P916F-STX`. It retains every row from the 118-line baseline matrix under stable `BASE-*` IDs and adds source-backed thermal, firmware-access, setup, SREP and package claims. `Evidence class` and `Source coverage` are separate: a historical live finding can remain live-confirmed when only its report is retained, while a complete-looking source excerpt does not become a live test.
 
-## Platform
+Canonical class definitions and coverage terms are maintained in [`reverse-engineering-methodology.md`](reverse-engineering-methodology.md#evidence-classification). Source IDs `S1`–`S10` and their exact locators are defined in [`research-sources.md`](research-sources.md#project-sources). Links in the Source column are public detail pages or public source-register anchors; private File Library citation tokens are not used as evidence links.
 
-| Claim | Status | Evidence |
-|---|---|---|
-| Product/platform is MECHREVO Xingyao 14 / `P916F-STX` | **Live-confirmed** | Firmware/OS identity |
-| CPU is AMD Ryzen AI 9 365 | **Platform-confirmed** | AMD official model naming |
-| iGPU is Radeon 880M | **Platform/live-confirmed** | AMD specification and machine observation |
-| Memory is 32 GiB on the documented unit | **Live-confirmed** | OS observation |
-| Internal panel is 2880×1800 | **Live-confirmed** | Display observation |
-| BIOS is 1.15 | **Live-confirmed** | Firmware UI |
-| EC version reported by firmware is 1.15 | **Live-confirmed** | Firmware UI |
-| EC silicon is ITE `0x5571` rev `0x07` | **Live-confirmed** | Super-I/O configuration space at 0x4E |
+## Baseline claims — platform and firmware
 
-## BIOS and boot graphics
+Scope shorthand: `P916F-STX / BIOS 1.15` means the identified unit and tested firmware scope unless a row states otherwise. The baseline's `Platform-confirmed`, `Platform/live-confirmed`, `Static-confirmed + live-correlated` and `Static-confirmed only` descriptions are represented by one canonical class; the interpretation column preserves the additional qualification.
 
-| Claim | Status | Evidence |
-|---|---|---|
-| BIOS 1.15 contains an 800×600 animated GIF | **Static-confirmed** | Exact BIOS/ROM extraction |
-| GIF has 60 frames and ~1.74 s duration | **Static-confirmed** | Extracted resource inspection |
-| Animation resource GUID is `931F77D1-10FE-48BF-AB72-773D389E3FAA` | **Static-confirmed** | Firmware object analysis |
-| `OemBadgingSupportDxe` is associated with the resource | **Static-confirmed** | Firmware module/resource analysis |
-| Linux BGRT xoffset/yoffset is 1040/387 | **Live-confirmed** | ACPI BGRT sysfs data |
-| Generic H2OFFT `-edt4f` maps to IHISI type `0x54` | **Comparative only** | Generic Insyde H2OFFT/IHISI analysis |
-| Exact P916F `ChipsetSvcSmm` callback rejects type `0x54` | **Static-confirmed** | P916F BIOS disassembly |
-| Generic `-logoupdate` / type `0x6D` expects GUID `DACFAB69-F977-4784-8AD8-7724A6F4B440` | **Comparative only** | Generic Insyde logo-update analysis |
-| Required type-0x6D target is present in Windows ESRT | **Rejected** | Absent in live ESRT inspection |
-| Required type-0x6D target is present in raw-ROM FDM | **Rejected** | Absent from 47-entry HFDM table at raw-ROM offset `0x1D7C000` |
-| A working logo-only update path is established for BIOS 1.15 | **Not established** | Standard type-0x54 and type-0x6D paths are unavailable |
+| ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| BASE-001 | Product/platform is MECHREVO Xingyao 14 / `P916F-STX` | Documented unit | Live-confirmed | Retained report only | S1 · [platform identity](hardware-platform.md#platform-identity) · [source register](research-sources.md#project-sources) | Firmware/OS identity is recorded for this unit; do not generalize to other P916F family variants. |
+| BASE-002 | CPU is AMD Ryzen AI 9 365 | Documented unit | Comparative only | Retained report only | S1 · [CPU/graphics platform](hardware-platform.md#cpu--graphics-platform) | Canonical model naming is retained from the platform reference and AMD specification; the 20-worker stress line is not independent topology proof. |
+| BASE-003 | iGPU is Radeon 880M | Documented unit | Live-confirmed | Retained report only | S1 · [CPU/graphics platform](hardware-platform.md#cpu--graphics-platform) | AMD specification is comparative corroboration; the machine observation supplies the platform scope. |
+| BASE-004 | Memory is 32 GiB on the documented unit | Documented unit | Live-confirmed | Retained report only | S1 · [platform identity](hardware-platform.md#platform-identity) | No claim about other configurations or upgradeability is implied. |
+| BASE-005 | Internal panel is 2880×1800 | Documented unit | Live-confirmed | Retained report only | S1 · [internal display](hardware-platform.md#internal-display) | Resolution is retained; an unretained refresh rate is not inferred. |
+| BASE-006 | BIOS is 1.15 | Tested firmware | Live-confirmed | Retained report only | S1 · [version history](firmware-bios.md) | The raw UI value is a firmware identity, not a package provenance claim. |
+| BASE-007 | EC version reported by firmware is 1.15 | Tested firmware | Live-confirmed | Retained report only | S1 · [version history](firmware-bios.md) | Separate from the internal EC string `V1.09`; the namespaces are not merged. |
+| BASE-008 | EC silicon is ITE `0x5571` rev `0x07` | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [Super-I/O identity](embedded-controller.md#silicon-and-host-interfaces) · [validation](validation.md#1-live-ite-super-io-identity) | Valid identity was observed at I/O configuration port `0x4E`; `0x2E` is not the working port. |
 
-## SetupUtility
+## Baseline claims — BIOS and boot graphics
 
-| Claim | Status | Evidence |
-|---|---|---|
-| SetupUtility GUID is `FE3542FE-C1D3-4EF8-657C-8048606FF670` | **Static-confirmed** | BIOS 1.15 firmware analysis |
-| Boot formset GUID is `2D068309-12AC-45AB-9600-9187513CCDD8` | **Static-confirmed** | IFR analysis |
-| Quiet Boot QuestionId is `0x1064` | **Static-confirmed** | IFR analysis |
-| Quiet Boot is `SystemConfig + 0x6E` | **Static-confirmed** | IFR analysis |
-| Quiet Boot values are 0=Disabled / 1=Enabled | **Static-confirmed** | IFR analysis |
-| `Setup[0x6E] = 0x01` was observed | **Live-confirmed** | Runtime setup-variable read |
-| Suppressed Boot form can be exposed at runtime with SREP | **Live-confirmed** | Successful runtime patch and visible hidden Boot form |
-| Permanent patch at SetupUtility PE offset ~`0x2636A0` is validated | **Not tested** | Static landmark only |
-| `Dynamic LID` maps to `AMD_PBS_SETUP + 0xDF`, default 0 | **Static-confirmed** | Firmware form analysis |
-| User-facing behavior of Dynamic LID is known | **Not established** | No live behavior mapping |
+| ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| BASE-009 | BIOS 1.15 contains an 800×600 animated GIF | BIOS 1.15 image | Static-confirmed | Retained report only | S1 · [boot animation resource](boot-logo-research.md#scope-and-conclusion) | Static firmware/resource finding; not a claim that the file is distributable. |
+| BASE-010 | GIF has 60 frames and approximately 1.74 seconds duration | BIOS 1.15 image | Artifact-confirmed | Retained report only | S1 · [boot animation resource](boot-logo-research.md#scope-and-conclusion) | Duration is resource metadata, not measured boot time. |
+| BASE-011 | Animation resource GUID is `931F77D1-10FE-48BF-AB72-773D389E3FAA` | BIOS 1.15 image | Static-confirmed | Retained report only | S1 · [boot animation resource](boot-logo-research.md#scope-and-conclusion) | GUID is retained exactly as identified in firmware analysis. |
+| BASE-012 | `OemBadgingSupportDxe` is associated with the resource | BIOS 1.15 image | Static-confirmed | Retained report only | S1 · [boot animation resource](boot-logo-research.md#scope-and-conclusion) | Association is static; it does not prove a logo-only update interface. |
+| BASE-013 | Linux BGRT xoffset/yoffset is 1040/387 | Documented unit, observed Linux environment | Live-confirmed | Retained report only | S1 · [live BGRT evidence](boot-logo-research.md#scope-and-conclusion) | Raw values are retained; geometry is corroboration, not a replacement API. |
+| BASE-014 | Generic H2OFFT `-edt4f` maps to IHISI type `0x54` | Generic Insyde context | Comparative only | Retained report only | S10 · [H2OFFT Type 0x54](boot-logo-research.md#examined-type-0x54-extra-data-path) | Generic mapping is not P916F support. |
+| BASE-015 | Exact P916F `ChipsetSvcSmm` callback rejects type `0x54` | BIOS 1.15 image | Static-confirmed | Retained report only | S10 · [exact callback result](boot-logo-research.md#examined-type-0x54-extra-data-path) | Scoped to the examined callback and image; no universal Type-0x54 conclusion. |
+| BASE-016 | Generic `-logoupdate` / type `0x6D` expects GUID `DACFAB69-F977-4784-8AD8-7724A6F4B440` | Generic Insyde context | Comparative only | Retained report only | S10 · [Type-6D route](boot-logo-research.md#examined-authenticated-type-0x6d-path) | Expected generic target is not evidence that this image provisions it. |
+| BASE-017 | Required type-`0x6D` target is present in Windows ESRT | Documented unit, BIOS 1.15 | Rejected | Retained report only | S10 · [Windows ESRT result](boot-logo-research.md#result-matrix) | The proposed presence claim failed in the retained ESRT inspection; this does not prove every update route absent. |
+| BASE-018 | Required type-`0x6D` target is present in raw-ROM FDM | Documented raw image, BIOS 1.15 | Rejected | Retained report only | S10 · [raw-ROM FDM result](boot-logo-research.md#result-matrix) | The proposed presence claim failed for the 47-entry HFDM table at raw-ROM `0x1D7C000`; not a full flash-region absence claim. |
+| BASE-019 | A working logo-only update path is established for BIOS 1.15 | BIOS 1.15 image | Not established | Retained report only | S10 · [combined conclusion](boot-logo-research.md#scope-and-conclusion) | The two standard paths investigated are unavailable; a separate OEM path is unresolved. |
 
-## EC image and H2RAM
+## Baseline claims — SetupUtility
 
-| Claim | Status | Evidence |
-|---|---|---|
-| Raw ROM is 32 MiB, SHA-256 `77043505b6f42e4a482110a7ba0c7e12ba6b1db28fdaed2743c28578bbf76cd7` | **Artifact-confirmed** | Exact dump/hash |
-| Preferred EC carve is raw-ROM offset `0x081000`, length `0x20000` | **Static-confirmed** | ROM carve and code/data inspection |
-| EC carve SHA-256 is `42c117f00c130c5e533be93ee1657401ac4d687255ed1b2250f74d3cc79397ea` | **Artifact-confirmed** | Exact hash |
-| EC code is MCS-51/8051-family | **Static-confirmed** | Reset/vector/opcode structure |
-| H2RAM maps host `0xFEEC2300..0xFEEC23FF` to EC XRAM `0x0300..0x03FF` | **Static-confirmed + live-correlated** | DSDT, EC initialization and live MMIO |
-| EC `0x0394` is the SOC value used by charge logic | **Static-confirmed + live-correlated** | Charge comparisons and MMIO cross-check |
+| ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| BASE-020 | SetupUtility GUID is `FE3542FE-C1D3-4EF8-657C-8048606FF670` | BIOS 1.15 image | Static-confirmed | Retained report only | S1 · [SetupUtility and HII formsets](firmware-bios.md#setuputility-and-hii-formsets) | Exact FFS identifier; not a live menu-visibility result. |
+| BASE-021 | Boot formset GUID is `2D068309-12AC-45AB-9600-9187513CCDD8` | BIOS 1.15 image | Static-confirmed | Retained report only | S1 · [SetupUtility and HII formsets](firmware-bios.md#setuputility-and-hii-formsets) | Static IFR identity; child controls may have suppression conditions. |
+| BASE-022 | Quiet Boot QuestionId is `0x1064` | BIOS 1.15 IFR | Static-confirmed | Retained report only | S1 · [Quiet Boot](firmware-bios.md#quiet-boot) | Question identity retained in the baseline investigation, not supplied by the selected S2 option rows. |
+| BASE-023 | Quiet Boot is `SystemConfig + 0x6E` | BIOS 1.15 IFR | Static-confirmed | Retained report only | S1 · [Quiet Boot](firmware-bios.md#quiet-boot) | VarStore, GUID and offset are static metadata; a default is not a live read. |
+| BASE-024 | Quiet Boot values are 0=Disabled / 1=Enabled | BIOS 1.15 IFR | Static-confirmed | Retained report only | S1 · [Quiet Boot](firmware-bios.md#quiet-boot) | Enum values retained from the baseline report. |
+| BASE-025 | `Setup[0x6E] = 0x01` was observed | Documented unit, runtime setup read | Live-confirmed | Retained report only | S1 · [runtime setup visibility](firmware-bios.md#runtime-visibility-and-permanent-modification) | One runtime read; it does not establish a save/change experiment or boot presentation causality. |
+| BASE-026 | Suppressed Boot form can be exposed at runtime with SREP | Documented unit, reported SREP session | Live-confirmed | Retained report only | S1/S7 · [SREP runtime reveal](srep-runtime-reveal.md#recorded-runtime-observation) | The visible Boot page is a retained historical observation; exact successful build/config/photo association remains unresolved. |
+| BASE-027 | Permanent patch at SetupUtility PE offset approximately `0x2636A0` is validated | Extracted SetupUtility PE, BIOS 1.15 scope | Not tested | Retained report only | S1 · [permanent SetupUtility candidate](srep-runtime-reveal.md#permanent-setuputility-candidate) | Static PE file-offset landmark only; not raw-ROM, not flashed and not a validated patch. |
+| BASE-028 | `Dynamic LID` maps to `AMD_PBS_SETUP + 0xDF`, default 0 | BIOS 1.15 IFR | Static-confirmed | Selected excerpt included | S2 · [SetupUtility and HII formsets](firmware-bios.md#setuputility-and-hii-formsets) | Static option mapping; default is not a live runtime value. |
+| BASE-029 | User-facing behavior of Dynamic LID is known | Documented unit | Not established | Source identified but not exported | S2 · [SetupUtility and HII formsets](firmware-bios.md#setuputility-and-hii-formsets) · [pending P12](documentation-status.md#pending-evidence) | The option name and static mapping do not establish open-lid power behavior. |
 
-## PMC2
+## Baseline claims — EC image, H2RAM and PMC2
 
-| Claim | Status | Evidence |
-|---|---|---|
-| ITE configuration port is 0x4E | **Live-confirmed** | Valid chip ID only at 0x4E |
-| PMC2 LDN is 0x12 and active | **Live-confirmed** | Super-I/O configuration read |
-| PMC2 data port is 0x68 | **Live-confirmed** | Super-I/O configuration and working transactions |
-| PMC2 command/status port is 0x6C | **Live-confirmed** | Super-I/O configuration and working transactions |
-| OBF bit0 / IBF bit1 transaction flow works | **Live-confirmed** | Successful battery command transactions |
+| ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| BASE-030 | Raw ROM is 32 MiB, SHA-256 `77043505b6f42e4a482110a7ba0c7e12ba6b1db28fdaed2743c28578bbf76cd7` | Documented raw image | Artifact-confirmed | Retained report only | S1 · [current raw ROM](research-artifacts.md#current-raw-32-mib-rom) · [artifact registry](research-artifacts.md#artifact-registry) | Historical identity retained; original bytes were not rehashed in this documentation pass. |
+| BASE-031 | Preferred EC carve is raw-ROM offset `0x081000`, length `0x20000` | Documented raw image and EC carve | Static-confirmed | Retained report only | S1 · [EC firmware provenance](embedded-controller.md#ec-firmware-image-and-address-spaces) | Explicitly raw-ROM-relative; not an updater-image offset. |
+| BASE-032 | EC carve SHA-256 is `42c117f00c130c5e533be93ee1657401ac4d687255ed1b2250f74d3cc79397ea` | Documented raw image and EC carve | Artifact-confirmed | Retained report only | S1 · [EC firmware provenance](embedded-controller.md#ec-firmware-image-and-address-spaces) · [artifact registry](research-artifacts.md#artifact-registry) | Digest identifies the historical carve; it is not a current rehash receipt. |
+| BASE-033 | EC code is MCS-51/8051-family | Preferred EC carve | Static-confirmed | Retained report only | S1 · [EC firmware provenance](embedded-controller.md#ec-firmware-image-and-address-spaces) | Reset/vector/opcode structure supports family identification; no specific disassembler version is asserted. |
+| BASE-034 | H2RAM maps host `0xFEEC2300..0xFEEC23FF` to EC XRAM `0x0300..0x03FF` | Documented unit, EC/DSDT scope | Static-confirmed | Selected excerpt included | S1/S3 · [H2RAM mapping](embedded-controller.md#h2ram-mapping) | Live MMIO reads correlate with the static mapping; host physical MMIO and EC XRAM namespaces remain distinct. |
+| BASE-035 | EC `0x0394` is the SOC value used by charge logic | Preferred EC carve and documented unit | Static-confirmed | Retained report only | S1 · [battery percentage anchor](embedded-controller.md#battery-percentage-anchor) | Live MMIO correlation is retained; address is EC XRAM, with host mapping `0xFEEC2394`. |
+| BASE-036 | ITE configuration port is `0x4E` | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [Super-I/O identity](embedded-controller.md#silicon-and-host-interfaces) · [validation](validation.md#1-live-ite-super-io-identity) | Valid chip identity was observed at `0x4E`; candidate `0x2E` returned invalid identity. |
+| BASE-037 | PMC2 LDN is `0x12` and active | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [PMC2 transport](embedded-controller.md#pmc2-host-transport) · [validation](validation.md#1-live-ite-super-io-identity) | Configuration-space observation, not generic ITE documentation. |
+| BASE-038 | PMC2 data port is `0x68` | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [PMC2 transport](embedded-controller.md#pmc2-host-transport) · [validation](validation.md#3-pmc-transaction-behavior) | Port role is data; command bytes are not represented as a second byte on this port. |
+| BASE-039 | PMC2 command/status port is `0x6C` | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [PMC2 transport](embedded-controller.md#pmc2-host-transport) · [validation](validation.md#3-pmc-transaction-behavior) | Port role is command/status; exact wait semantics are limited to the recorded transaction contract. |
+| BASE-040 | OBF bit 0 / IBF bit 1 transaction flow works | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [PMC transaction behavior](validation.md#3-pmc-transaction-behavior) | Successful battery transactions exercised these status semantics; no universal concurrency/timeout guarantee is inferred. |
 
-## Battery charge limit
+## Baseline claims — battery charge limit
 
-| Claim | Status | Evidence |
-|---|---|---|
-| `0x0D01.bit4` is enable/state | **Static-confirmed + live-correlated** | EC handlers and state query |
-| `0x0D13` is threshold #1 | **Static-confirmed + live set/readback** | EC handlers and `F2` / `F1 13` |
-| `0x0D14` is threshold #2 | **Static-confirmed + live set/readback** | EC handlers and `F3` / `F1 14` |
-| Threshold setters accept 0..100 inclusive | **Static-confirmed** | Exact 8051 range-check logic |
-| `F1 11` enables the subsystem | **Live-confirmed** | State changed 0 -> 1 |
-| `F1 12` reads state | **Live-confirmed** | Coherent 0/1 responses |
-| `F1 13` reads T1 | **Live-confirmed** | Readback 0 then 80 |
-| `F1 14` reads T2 | **Live-confirmed** | Readback 0 then 100 |
-| `F2 80` sets T1 to 80 | **Live-confirmed** | Response/readback 80 |
-| `F3 100` sets T2 to 100 | **Live-confirmed** | Response/readback 100 |
-| `F1 10` disable/reset clears enable and both thresholds | **Static-confirmed only** | EC reset handler |
-| `T1=80,T2=100` caps charging around 80% | **Live-confirmed** | Charging/no-charging transition |
-| Arbitrary `T1=N,T2=100` produces an N% cap | **Not established** | Only 80/100 behaviorally validated |
-| Exact semantic role of T2 is known | **Not established** | Control-flow participation is known; user-facing semantics are not |
-| Exact hysteresis width is known | **Not established** | Linux SOC display is integer-rounded |
-| State persists across normal reboot | **Live-confirmed** | Post-reboot readback 1/80/100 |
-| State persists across complete EC power loss | **Not established** | Not tested |
+| ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| BASE-041 | `0x0D01.bit4` is enable/state | Preferred EC carve and documented unit | Static-confirmed | Retained report only | S1 · [charge-limit state](embedded-controller.md#charge-control-subsystem) | The state query correlated with the static handler; no separate persistence mechanism is inferred. |
+| BASE-042 | `0x0D13` is threshold #1 | Preferred EC carve and documented unit | Static-confirmed | Full bytes/capture included | S1 · [charge-limit state](embedded-controller.md#charge-control-subsystem) · [threshold readback](validation.md#5-threshold-writereadback-while-disabled) | Static handler and live set/readback agree; protocol labels retain raw notation. |
+| BASE-043 | `0x0D14` is threshold #2 | Preferred EC carve and documented unit | Static-confirmed | Full bytes/capture included | S1 · [charge-limit state](embedded-controller.md#charge-control-subsystem) · [threshold readback](validation.md#5-threshold-writereadback-while-disabled) | Static handler and live set/readback agree; exact user-facing T2 semantics remain open. |
+| BASE-044 | Threshold setters accept 0..100 inclusive | Preferred EC carve | Static-confirmed | Retained report only | S1 · [inclusive numeric range](battery-charge-limit.md#inclusive-numeric-range) | Instruction-level range check; this is not behavioral validation of every threshold pair. |
+| BASE-045 | `0xF1 0x11` enables the subsystem | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [enable transition](validation.md#6-enable-transition) | State changed from 0 to 1 in the recorded test; no generic setter guidance follows. |
+| BASE-046 | `0xF1 0x12` reads state | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [initial charge-limit state](validation.md#4-initial-charge-limit-state) | Coherent 0/1 responses were recorded. |
+| BASE-047 | `0xF1 0x13` reads T1 | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [threshold readback](validation.md#5-threshold-writereadback-while-disabled) | Readback was 0 before and 80 after the retained test. |
+| BASE-048 | `0xF1 0x14` reads T2 | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [threshold readback](validation.md#5-threshold-writereadback-while-disabled) | Readback was 0 before and 100 after the retained test. |
+| BASE-049 | `0xF2 0x50` sets T1 to 80% | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [threshold readback](validation.md#5-threshold-writereadback-while-disabled) | Historical raw labels remain unchanged in the validation source; encoded data byte `0x50` represents decimal 80. |
+| BASE-050 | `0xF3 0x64` sets T2 to 100% | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [threshold readback](validation.md#5-threshold-writereadback-while-disabled) | Historical raw labels remain unchanged in the validation source; encoded data byte `0x64` represents decimal 100. |
+| BASE-051 | `0xF1 0x10` disable/reset clears enable and both thresholds | Preferred EC carve | Static-confirmed | Retained report only | S1 · [disable/reset path](battery-charge-limit.md#disablereset-path) | Static reset handler only; disable/reset was not promoted to a live rollback result. |
+| BASE-052 | `T1=80,T2=100` caps charging around 80% | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [charge-stop behavior](validation.md#7-charge-stop-behavior-above-the-configured-region) · [boundary behavior](validation.md#8-boundary-behavior-below-the-cap) | Behaviorally validated only for this pair; transition samples and integer SOC rounding limit precision. |
+| BASE-053 | Arbitrary `T1=N,T2=100` produces an N% cap | Documented unit | Not established | Full bytes/capture included | S1 · [threshold semantics](battery-charge-limit.md#threshold-semantics) | Only the `80/100` pair was behaviorally validated; setter range alone is insufficient. |
+| BASE-054 | Exact semantic role of T2 is known | Documented unit and EC image | Not established | Retained report only | S1 · [threshold semantics](battery-charge-limit.md#threshold-semantics) | Control-flow participation is known; user-facing meaning is not. |
+| BASE-055 | Exact hysteresis width is known | Documented unit | Not established | Full bytes/capture included | S1 · [boundary behavior](validation.md#8-boundary-behavior-below-the-cap) | Linux SOC is integer-rounded; fractional threshold and exact restart width are unresolved. |
+| BASE-056 | State persists across normal reboot | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [reboot persistence](validation.md#10-reboot-persistence) | Post-reboot readback returned state 1 / T1 80 / T2 100; this is not EC-power-loss evidence. |
+| BASE-057 | State persists across complete EC power loss | Documented unit | Not tested | Full bytes/capture included | S1 · [reboot persistence](validation.md#10-reboot-persistence) | No complete EC power-loss or battery-controller reset test is retained. |
 
-## Power path
+## Baseline claims — power path
 
-| Claim | Status | Evidence |
-|---|---|---|
-| AC can be online while battery reports `Not charging`, `power_now=0` | **Live-confirmed** | Sysfs measurement |
-| Battery supplied net energy during a five-minute full-CPU load | **Live-confirmed** | `energy_now` decreased 63.154 Wh -> 62.661 Wh |
-| The exact electrical power-path mechanism is fully characterized | **Not established** | Charger topology not fully decoded |
+| ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| BASE-058 | AC can be online while battery reports `Not charging`, `power_now=0` | Documented unit, AC-online snapshot | Live-confirmed | Full bytes/capture included | S1 · [AC-online capped snapshot](validation.md#9-ac-online-capped-snapshot) | Reports battery-side telemetry at that instant; not wall-side adapter power. |
+| BASE-059 | Battery supplied net energy during a five-minute full-CPU load | Documented unit, retained load interval | Live-confirmed | Full bytes/capture included | S1 · [high-load battery-energy test](validation.md#11-high-load-battery-energy-test) | `energy_now` decreased 63.154 Wh to 62.661 Wh; the stress runtime and capture timestamp span remain distinct. |
+| BASE-060 | Exact electrical power-path mechanism is fully characterized | Documented unit | Not established | Full bytes/capture included | S1 · [AC/power observation](battery-charge-limit.md#ac-and-battery-power-observations) | Observed energy and power-state transitions do not decode charger topology or all electrical conditions. |
 
-## Rejected charge-control paths
+## Baseline claims — rejected or untested charge-control paths
 
-| Path | Status | Evidence |
-|---|---|---|
-| Huawei threshold GET `0x1103` | **Rejected** | Live failure/unsupported result |
-| Huawei SET `0x1003` | **Not tested** | Write avoided after GET failed |
-| Generic Uniwill offsets `0x07B9/0x07D0` as the P916F path | **Rejected as P916F evidence** | Generic multi-model software only; exact P916F firmware uses another subsystem |
-| `INOU0000` / `ECRR` / `ECRW` | **Absent** | Not present in P916F ACPI tables |
-| Dedicated I2EC at base `0x380` | **Rejected** | Read-only cross-check returned `0xFF` while MMIO returned valid SOC |
-| ACPI `_BTP` as charge cap | **Rejected** | `_BTP` is the ACPI battery trip-point mechanism |
+| ID | Claim / path | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| BASE-061 | Huawei threshold GET `0x1103` | Documented unit | Rejected | Retained report only | S1 · [Huawei threshold API](battery-charge-limit.md#paths-tested-and-rejected) | Live failure/unsupported result rejected this GET path; it does not reject every Huawei WMI function. |
+| BASE-062 | Huawei SET `0x1003` | Documented unit | Not tested | Retained report only | S1 · [Huawei threshold API](battery-charge-limit.md#paths-tested-and-rejected) | Write was avoided after GET failure. It is not a failed test. |
+| BASE-063 | Generic Uniwill offsets `0x07B9/0x07D0` are the P916F path | P916F versus generic OEM software | Rejected | Retained report only | S1 · [generic offsets](battery-charge-limit.md#paths-tested-and-rejected) | Generic multi-model software is comparative only; exact P916F firmware uses another subsystem. |
+| BASE-064 | `INOU0000` / `ECRR` / `ECRW` path is present | P916F ACPI tables | Not established | Retained report only | S1 · [ACPI EC versus PMC2](acpi-wmi.md#classic-acpi-ec-versus-ite-pmc2) | Named objects were not present in the retained tables. This is scoped absence, not a universal firmware claim. |
+| BASE-065 | Dedicated I2EC at base `0x380` is usable | Documented unit | Rejected | Full bytes/capture included | S1 · [rejected I2EC hypothesis](validation.md#2-rejected-candidate-i2ec-path) | Read-only reads returned `0xFF` while MMIO returned a plausible SOC; rejected as a usable stock path. |
+| BASE-066 | ACPI `_BTP` is the charge cap | P916F ACPI | Rejected | Retained report only | S1 · [`_BTP` semantics](acpi-wmi.md#dsdt-ec-field-map) | `_BTP` is the ACPI battery trip-point mechanism; it is not the dedicated threshold subsystem. |
 
-## Audio
+## Baseline claims — audio
 
-| Claim | Status | Evidence |
-|---|---|---|
-| Internal codec is Realtek ALC256 | **Live-confirmed** | ALSA enumeration |
-| Linux exposes stereo FL/FR | **Live-confirmed** | PipeWire/WirePlumber enumeration |
-| Linux exposes a separate LFE/four-channel speaker endpoint | **Rejected** | Not present in the logical audio topology |
-| Exact OEM Nahimic/A-Volute DSP profile is recovered | **Not established** | OEM coefficients/configuration not recovered |
+| ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| BASE-067 | Internal codec is Realtek ALC256 | Documented unit, Linux environment | Live-confirmed | Retained report only | S1 · [codec path](audio.md#1-codec-path) | ALSA enumeration and basic playback establish the codec path; no OEM tuning claim follows. |
+| BASE-068 | Linux exposes stereo FL/FR | Documented unit, Linux environment | Live-confirmed | Retained report only | S1 · [logical speaker topology](audio.md#2-logical-speaker-topology-under-linux) | Logical channels do not identify physical driver count. |
+| BASE-069 | Linux exposes a separate LFE/four-channel speaker endpoint | Documented unit, Linux environment | Rejected | Retained report only | S1 · [logical speaker topology](audio.md#2-logical-speaker-topology-under-linux) | No such logical endpoint was observed; this does not prove unused physical drivers. |
+| BASE-070 | Exact OEM Nahimic/A-Volute DSP profile is recovered | Documented unit | Not established | Retained report only | S1 · [Windows OEM processing](audio.md#4-windows-oem-processing) · [audio unknowns](open-questions.md#audio-dsp-and-physical-topology) | OEM coefficients and amplifier configuration were not recovered; DSP remains a bounded interpretation. |
+
+## Scope-correction claims
+
+These rows make explicit corrections that prevent a reported worker count, logical
+audio endpoint, WMAA wrapper shape or battery telemetry observation from being
+over-interpreted.
+
+| ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| PLATFORM-001 | A stress output reporting 20 workers independently establishes 10 physical cores / 20 logical CPUs | Documented unit, retained load test | Not established | Full bytes/capture included | S1 · [high-load test](validation.md#11-high-load-battery-energy-test) · [CPU scope](hardware-platform.md#cpu--graphics-platform) | Worker count is a workload setting; CPU model/topology attribution is a separate platform/specification claim. |
+| AUDIO-001 | Four physical speaker drivers are confirmed by OEM specification or physical inspection | Documented unit | Not established | Retained report only | S1 · [physical layout](audio.md#3-physical-speaker-layout-versus-logical-channels) · [audio unknowns](open-questions.md#audio-dsp-and-physical-topology) | The baseline reports four drivers, but no independent product or inspection source is retained. |
+| ACPI-001 | The WMAA direct AML return is a flat 256-byte buffer | P916F ACPI/WMI | Rejected | Selected excerpt included | S4 · [WMAA dispatch](acpi-wmi.md#wmaa-dispatch-inspection) | The correction is `Package(2)` containing a `Buffer(4)` and helper result `Buffer(0x100)`; wrapper shape and helper layout are distinct. |
+
+## Added source-backed thermal and performance claims
+
+These rows do not replace the 70 baseline rows. They index the AML excerpt support added by the thermal reference. The September `ECMD(0x94)` / `ECMD(0x95)` map is kept separate from the earlier unassociated `0x91` / `0x92` lead.
+
+| ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| THERM-001 | EC fields `FNS0`, `FNS1` and `FTVL` occur at EC-window offsets `0x3B`, `0x3D` and `0x3F` with widths 16, 16 and 8 bits | September AML excerpt; P916F association as retained | Static-confirmed | Selected excerpt included | S3 · [thermal EC fields](thermal-performance.md#ec-visible-fields) · [source register](research-sources.md#project-sources) | Field layout is static; atomicity, update rate and RPM calibration are not established. |
+| THERM-002 | `GFNS` selects FNS0/FNS1 for request selector `0x00`/`0x01` and returns the selected word in response bytes `0x01..0x02` | September AML excerpt | Static-confirmed | Selected excerpt included | S4 · [GFNS](thermal-performance.md#gfns-fan-telemetry) | Defines a two-channel query layout, not a measured RPM conversion or polling contract. |
+| THERM-003 | `GPFM` returns `FTVL` at response offset `0x01` for MFID `0x03`, SFID `0x09` | September AML excerpt | Static-confirmed | Selected excerpt included | S5 · [GPFM](thermal-performance.md#gpfm-profile-state-query) | Query layout is established; reachable values under every power/lid condition are unknown. |
+| THERM-004 | September `SPFM` invokes `THMM` before profile branches and maps profile `0x01`/`0x02` to `ECMD(0x94)`/`ECMD(0x95)` | September AML excerpt | Static-confirmed | Selected excerpt included | S5 · [SPFM](thermal-performance.md#spfm-profile-request) | Call ordering means nonzero status does not prove no earlier side effect; no direct SPFM write was live-validated. |
+| THERM-005 | `THMM` builds a seven-byte DPTI buffer; the Balance excerpt contains three parameter assignments and two following ALIB calls | September AML excerpt | Static-confirmed | Selected excerpt included | S3 · [THMM](thermal-performance.md#thmm-conditional-alib-parameter-sequence) | Excerpt ends after the third assignment. Full Performance/LID sequences require source recovery; ALIB values are not RPM curves or EC fan-table contents. |
+| THERM-006 | `_Q16` source labels identify Balance and Performance event branches and their WMEN/notify payloads | September AML excerpt | Static-confirmed | Selected excerpt included | S3 · [Fn+X event path](thermal-performance.md#fnx-event-path) | Labels are source-derived; a complete key-scan and live profile transition are not established. |
+| THERM-007 | `_Q40` and `_Q81` call `THMM(FTVL)`; `_QA0` and `_QA1` notify `LCBT` information/status and then `ACAD` status | September AML excerpt | Static-confirmed | Selected excerpt included | S3 · [query and notification order](thermal-performance.md#query-and-notification-order) | Static dispatch/order only; it does not establish a live profile or power transition. |
+| THERM-008 | Exact tachometer calibration, target-RPM tables, temperature axis, safe mode setter and direct PWM contract are established | P916F EC | Not established | Unverified lead | S3 · [unresolved EC control](thermal-performance.md#unresolved-ec-level-control) · [pending P04/P05](documentation-status.md#pending-evidence) | Image identity, bank context and decoding evidence are required before adopting proposed register or array interpretations. |
+| THERM-009 | Earlier `SPFM` mapping uses `ECMD(0x91)` / `ECMD(0x92)` for this P916F image | Earlier source versus September source | Not established | Unverified lead | S6 · [source-version discrepancy](thermal-performance.md#source-version-discrepancy) | Firmware association is incomplete; `0x91/0x92` and September `0x94/0x95` must not be combined or offered interchangeably. |
+
+## Added firmware-access and ROM Armor claims
+
+| ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| ACCESS-001 | The retained PSP attribute reports `rom_armor_enforced:1` at `/sys/bus/pci/devices/0000:c1:00.2/` | Documented unit, retained Linux observation | Live-confirmed | Selected excerpt included | S8 · [ROM Armor observation](firmware-access.md#retained-rom-armor-observation) · [source register](research-sources.md#project-sources) | Exact line and PCI address are retained for that observation; other PSP fields, universal flash restrictions and anti-rollback are not established. |
+| ACCESS-002 | A complete flashrom command/version/diagnostic transcript is available | Documented unit | Not established | Source identified but not exported | S8 · [direct SPI and vendor-service paths](firmware-access.md#direct-spi-and-vendor-service-paths) · [pending P07/P08](documentation-status.md#pending-evidence) | Mounted summaries are not treated as raw terminal output; no broad Linux dump conclusion is made. |
+| ACCESS-003 | Offline archive enumeration and selected package hashes were performed without executing vendor programs | Identified archive inspection | Artifact-confirmed | Retained report only | S9 · [offline analysis](firmware-access.md#offline-analysis) · [artifact inspection](research-sources.md#artifact-inspection-record) | This confirms an offline workflow, not SPI access or successful firmware-service execution. |
+
+## Added setup, SREP and package claims
+| ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| SETUP-001 | The identified full setup audit reports 204 PBS and 416 CBS controls | P916F BIOS 1.15 audit source | Static-confirmed | Selected excerpt included | S2 · [setup counts](bios-setup-options.md#counts-in-this-page) | Source-reported totals, not importer counts or a full public inventory. |
+| SETUP-002 | The complete BIOS option inventory has been imported into this repository | P916F BIOS 1.15 | Not established | Source identified but not exported | S2 · [setup scope](srep-runtime-reveal.md#static-form-structure) · [pending P01](documentation-status.md#pending-evidence) | Selected audit excerpts are available; the full identified source is still required before claiming complete import. |
+| SETUP-003 | The retained SREP candidate names AMD PBS, AMD CBS and Power formsets and intended visibility operations | P916F BIOS 1.15 candidate text | Artifact-confirmed | Selected excerpt included | S7 · [candidate configuration](srep-runtime-reveal.md#retained-candidate-configuration) | Candidate text establishes intended operations, not a known-good runtime session or safe persistent patch. |
+| SETUP-004 | A known-good SREP build/configuration/session is linked to the reported visible Boot page | Documented unit | Not established | Source identified but not exported | S1/S7 · [recorded runtime observation](srep-runtime-reveal.md#recorded-runtime-observation) · [pending P13](documentation-status.md#pending-evidence) | Runtime reveal remains a retained live observation; exact build, config digest and photograph association are unresolved. |
+| PKG-001 | `STX_SKU2_1.15.exe` is a 7-Zip SFX containing `isflash.bin`, H2OFFT and related members | P916F BIOS 1.15 package | Artifact-confirmed | Retained report only | S9 · [H2OFFT identity and embedded help](firmware-bios.md#h2offt-identity-and-embedded-help) · [artifact registry](research-artifacts.md#artifact-registry) | `isflash.bin` is nested in the executable, not directly in the outer ZIP; member identity is not execution evidence. |
+| PKG-002 | The measured `isflash.bin` and selected package members have retained sizes and SHA-256 identities | Identified package inventory | Artifact-confirmed | Retained report only | S9 · [artifact inspection record](research-sources.md#artifact-inspection-record) | Digests identify measured bytes; they do not establish vendor authenticity, compatibility or safe flashing. |
+| PKG-003 | H2OFFT textual version `6.73` and fixed PE version `6.7.3.0` are both present in the inspected artifact | P916F H2OFFT package | Artifact-confirmed | Retained report only | S9 · [H2OFFT identity and embedded help](firmware-bios.md#h2offt-identity-and-embedded-help) · [artifact registry](research-artifacts.md#artifact-registry) | These are two version-resource representations; neither is a live invocation or IHISI runtime version. |
+| PKG-004 | Embedded H2OFFT help contains `-g`, `-iv` and `-pq` option strings | P916F H2OFFT package | Static-confirmed | Retained report only | S9 · [H2OFFT identity and embedded help](firmware-bios.md#h2offt-identity-and-embedded-help) | Help strings establish available text in the executable, not that dump/version/region commands were run successfully. |
+| PKG-005 | The extracted updater EC carve at `isflash.bin+0x268E30`, length `0x18000`, has its retained digest | P916F updater package | Artifact-confirmed | Retained report only | S9 · [artifact inspection record](research-sources.md#artifact-inspection-record) | Updater carve and separate 128 KiB raw-ROM EC carve are distinct artifacts; equality is not inferred. |
+| PKG-006 | The updater's `[FlashComplete] Action=1,1` configuration establishes a successful flash and shutdown event | P916F updater package | Not established | Retained report only | S9 · [H2OFFT identity and embedded help](firmware-bios.md#h2offt-identity-and-embedded-help) | Static configuration describes intended post-flash behavior; no execution or successful flash transcript is retained. |
+
+## Matrix maintenance rules
+
+- A setter remains `Not tested` unless an invocation, initial state, response/readback and observed effect are retained. A getter does not promote its corresponding setter.
+- `Rejected` is scoped to the stated machine, image and test; `Not established` is used where evidence is insufficient; `Not tested` is used where an operation was intentionally not performed.
+- Source coverage is not a confidence score. Full text can be inert candidate material, while a retained report can document a genuine historical live result.
+- Source links point to the technical detail and the stable source-register ID. A missing source export belongs in [`documentation-status.md`](documentation-status.md#pending-evidence), not as a fabricated row or an unqualified fact.

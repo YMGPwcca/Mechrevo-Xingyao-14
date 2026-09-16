@@ -1,262 +1,137 @@
 # Research artifacts and provenance
 
-This repository intentionally stores **documentation only**. Binary artifacts used during reverse engineering are listed here for provenance but are not committed.
+This repository is documentation-only. Binary firmware, vendor executables, extracted resources and private reports are not distributed. The registry records identities and derivation paths so a reader can distinguish a matching file from a compatibility, authenticity or safety claim.
+
+## Artifact registry
 
-Exact hashes matter because the investigation touched several package revisions, generic OEM components and more than one representation of the EC firmware.
+### Registry schema and evidence boundary
 
-## Current raw 32 MiB ROM
+Each record uses the following fields where they carry information: artifact ID, canonical filename, local upload alias, artifact type, size, SHA-256, parent/member path or extraction range, address-space relevance, evidence class, source coverage, availability and use. `Artifact-confirmed` describes a checked byte identity or structure; it does not mean that the artifact is public or that a vendor operation was executed.
 
-```text
-filename: P916F-STX-current-ROM.bin
-size:     0x2000000 bytes / 32 MiB
-SHA-256:  77043505b6f42e4a482110a7ba0c7e12ba6b1db28fdaed2743c28578bbf76cd7
-```
+Measured package records below come from `inventory/mounted_artifacts.json` (`SRC-BINARIES`). SFX member and extraction records come from `inventory/sfx_inspection.json` (`SRC-SFX`). Both are offline byte measurements, not hardware tests. A `historical` record preserves a baseline report identity; it is not presented as a new rehash.
 
-This was a dump of the current machine and is the preferred source for machine-specific static claims.
+## Baseline machine-specific artifacts
 
-The later EC carve at ROM offset `0x081000` came from this file.
+The following records preserve the baseline identities and landmarks. Their source coverage is retained report or historical analysis unless explicitly marked as a new measurement below.
 
-## Final current-ROM IT5571 carve
+### Current raw 32 MiB ROM
 
-```text
-filename:   P916F-IT5571-EC-1.09.bin
-source:     P916F-STX-current-ROM.bin
-ROM offset: 0x081000
-length:     0x20000 bytes / 128 KiB
-SHA-256:    42c117f00c130c5e533be93ee1657401ac4d687255ed1b2250f74d3cc79397ea
-```
+The current image and preferred EC carve are the first two records in the baseline registry.
 
-This full 128 KiB carve is the EC image used for the detailed battery-limit reverse engineering documented in this repository.
+| Artifact ID | Canonical filename | Type / size | SHA-256 | Parent, member path or range | Address-space relevance | Evidence class / source coverage | Availability | Use or boundary |
+|---|---|---|---|---|---|---|---|---|
+| `ROM-P916F-CURRENT` | `P916F-STX-current-ROM.bin` | Raw 32 MiB firmware image; `33,554,432` bytes / `0x2000000` | `77043505b6f42e4a482110a7ba0c7e12ba6b1db28fdaed2743c28578bbf76cd7` | none | raw-ROM file offsets | Artifact-confirmed (historical); retained baseline identity, original bytes not rehashed in this record | Not distributed; original bytes not retained | Preferred parent for machine-specific static claims; EC carve at `0x081000` |
+| `EC-P916F-IT5571-109` | `P916F-IT5571-EC-1.09.bin` | EC image; `0x20000` bytes / 128 KiB | `42c117f00c130c5e533be93ee1657401ac4d687255ed1b2250f74d3cc79397ea` | `ROM-P916F-CURRENT + 0x081000`, length `0x20000` | raw-ROM carve; child digest is distinct from parent | Artifact-confirmed (historical); retained baseline identity | Not distributed | Preferred EC image for detailed battery analysis; second bank is sparse but real code/data |
 
-The first 64 KiB bank is dense; the second bank is sparse but contains real data/code and should not be mistaken for a separate unrelated EC image.
+### Other baseline identities
 
-## BIOS 1.15 updater packaging
+| Artifact ID | Canonical filename | Type / size | SHA-256 | Parent, member path or range | Address-space relevance | Evidence class / source coverage | Availability | Use or boundary |
+|---|---|---|---|---|---|---|---|---|
+| `UPDATER-OUTER-115` | `STX_SKU2_1.15.zip` | Outer vendor archive; size not retained | not retained | outer archive; contains `STX_SKU2_1.15.exe` | archive/container namespace | Not established; filename and nesting retained in baseline | Not retained | Do not substitute the EXE digest for this outer ZIP |
+| `EC-UPDATER-CARVE-18000` | `STX_SKU2_1.15.exe -> isflash.bin` EC carve | Earlier updater EC-like extraction; `0x18000` bytes / 98,304 bytes | `030ec5da8b5f027d2461af98b92416eab4a526734bee4b3032e5d9042d016023` | `isflash.bin + 0x268E30`, length `0x18000` | updater-image offset inside `isflash.bin`, not raw-ROM | Artifact-confirmed (historical; independently repeated in measured SFX record below); retained report | Not distributed | Contains `ITE EC-V14.6`, `IT557x V1.09 E00 - 20230831`, `MECHREVO`, `VER:01.0F.00`; not interchangeable with the 128 KiB raw-ROM carve |
+| `PKG-CC-GX-HISTORICAL` | `ControlCenter_5.56.1.13_Mechrevo_GX.zip` | GX Control Center package; size not retained in baseline | `d081d2b338068ca6fd1099be2f6762d522c1223796f20a800d47034842423449` | outer package; historical useful paths listed in baseline | archive/container namespace | Artifact-confirmed (historical report); package member sizes/digests were not retained in baseline | Not distributed | Generic OEM software evidence; not proof of P916F runtime support |
+| `BUNDLE-CHARGE-REVERSE` | `P916F-charge-reverse.tar.gz` | Compact service/component bundle; size not retained | not retained | outer bundle; members included `ACPIDriverDll.dll`, `GCUService.exe`, `service.ini` | archive/container namespace | Not established at bundle level; individual historical child identities retained | Not retained | Bundle digest must not be replaced by a child digest; no `ACPIDriver.sys` was present in the retained extraction |
+| `DLL-ACPIDRIVER-HISTORICAL` | `ACPIDriverDll.dll` | Native service component; size not retained | `97d7115943600c2a09951440859f9bd75fd0d8bff9db49c296c868b49df8c8c6` | `P916F-charge-reverse.tar.gz -> ACPIDriverDll.dll` (historical path) | extracted member namespace | Artifact-confirmed (historical); child hash retained, size/source bytes not retained | Not distributed | Historical interface landmarks: `\\.\ACPIDriver`, ReadEC IOCTL `0x9C40A488`, WriteEC IOCTL `0x9C40A48C`; not a published driver |
+| `EXE-GCUSERVICE-HISTORICAL` | `GCUService.exe` | Native service component; size not retained | `01225ef470420d50e51bc541d63dd5ed321835d40c4209106da9908c8f277a9c` | `P916F-charge-reverse.tar.gz -> GCUService.exe` (historical path) | extracted member namespace | Artifact-confirmed (historical); child hash retained, size/source bytes not retained | Not distributed | Historical names/types only; important method bodies were not recovered as normal unobfuscated logic |
+| `BOOT-GIF-115` | OEM boot animation resource | GIF; `800 x 600`, 60 frames, approximately 1.74 s; exact size/digest not retained | not retained | BIOS 1.15 resource associated with `OemBadgingSupportDxe`; no raw container offset promoted | firmware-resource namespace; do not treat duration as measured boot time | Artifact-confirmed (historical baseline metadata); exact resource extraction remains pending | Not distributed | GUID `931F77D1-10FE-48BF-AB72-773D389E3FAA`; exact size/hash and extraction offsets remain P11 |
+| `BMOF-WQBA` | `WQBA.bmof` | Extracted BMOF buffer; 1,092 bytes / `0x444` | not retained | DSDT `BMOF` buffer; extraction origin not retained | extracted BMOF buffer namespace | Artifact-confirmed (historical metadata); decoded schema not exported | Not distributed | Prefix `46 4F 4D 42 01 00 00 00 34 04 00 00 5C 10 00 00` (`FOMB`); BMOF GUID `05901221-D566-11D1-B2F0-00A0C9062910`; schema remains P06 |
 
-The outer vendor archive was:
+The earlier updater carve also contains the retained string `AMD Motherboard`. The compact charge-reverse extraction included AirplaneDriver-related files in addition to the listed native/service components. Both compact bundles are derived research collections, not independently authenticated vendor distributions.
 
-```text
-STX_SKU2_1.15.zip
-```
 
-The ZIP contained one file:
+## Uploaded package identities
 
-```text
-STX_SKU2_1.15.exe
-```
+The seven package rows are the complete measured set in `mounted_artifacts.json`. Canonical names remove only the local upload disambiguator `(1)` or `(2)` where the baseline or package identity supplies the unduplicated name; the local alias remains exact. Every parent was measured offline and is unavailable for distribution.
 
-The EXE was a 7-Zip self-extracting archive. Extracting the EXE yielded the Insyde payload, including:
+| Artifact ID | Canonical filename | Local upload alias | Type | Size (bytes) | SHA-256 | Parent/member path | Evidence / source coverage | Availability |
+|---|---|---|---|---:|---|---|---|---|
+| `PKG-01` | `ControlCenter_5.56.1.13_Mechrevo_GX.zip` | `ControlCenter_5.56.1.13_Mechrevo_GX(1).zip` | ZIP package | 281,753,965 | `d081d2b338068ca6fd1099be2f6762d522c1223796f20a800d47034842423449` | outer upload (no parent) | Artifact-confirmed; recomputed mounted bytes, `SRC-BINARIES`; not a hardware test | Not distributed; mounted upload excluded from the public evidence set |
+| `PKG-02` | `InsydeH2OEZE_x86_WINx64_100.00.03.11.zip` | `InsydeH2OEZE_x86_WINx64_100.00.03.11.zip` | ZIP package | 7,607,637 | `b6adb4a9cb84046cd342fe3b05fe6c16ab0e801040fa0f33d6b975d3b15768f9` | outer upload (no parent) | Artifact-confirmed; recomputed mounted bytes, `SRC-BINARIES`; not a hardware test | Not distributed; mounted upload excluded from the public evidence set |
+| `PKG-03` | `OSD(SKU1&SKU2).zip` | `OSD(SKU1&SKU2).zip` | ZIP package | 1,520,070 | `9ecdcc7287f043268126cd468f9126b03319b723c1a006bd344d1c7e75a8f109` | outer upload (no parent) | Artifact-confirmed; recomputed mounted bytes, `SRC-BINARIES`; not a hardware test | Not distributed; mounted upload excluded from the public evidence set |
+| `PKG-04` | `P916F_STX_H2OFFT_1.15_bundle.zip` | `P916F_STX_H2OFFT_1.15_bundle.zip` | ZIP package | 2,628,319 | `8982c65712910ea03e5e6336823b84c93802f37c60b6392ed22934a6130408ab` | outer upload (no parent) | Artifact-confirmed; recomputed mounted bytes, `SRC-BINARIES`; not a hardware test | Not distributed; mounted upload excluded from the public evidence set |
+| `PKG-05` | `STX_SKU2_1.09.exe` | `STX_SKU2_1.09.exe` | standalone executable | 17,757,829 | `397841144f18ada42418993dbd37238b777a0f4126f3d53b4910908ac75ee5f1` | outer upload (no parent) | Artifact-confirmed; recomputed mounted bytes, `SRC-BINARIES`; not a hardware test | Not distributed; mounted upload excluded from the public evidence set |
+| `PKG-06` | `STX_SKU2_1.15.exe` | `STX_SKU2_1.15.exe` | standalone executable | 18,419,646 | `11718b7f48a13ca08f627c1c3103cf4d1a3ee6857e15bcb165210c11e0ec446a` | outer upload (no parent) | Artifact-confirmed; recomputed mounted bytes, `SRC-BINARIES`; not a hardware test | Not distributed; mounted upload excluded from the public evidence set |
+| `PKG-07` | `jxgm_21911.zip` | `jxgm_21911(2).zip` | ZIP package | 33,456,863 | `b25bbac157abe916258d614afaabc4d39ee6be8dddd35229b998a9066acd9a2d` | outer upload (no parent) | Artifact-confirmed; recomputed mounted bytes, `SRC-BINARIES`; not a hardware test | Not distributed; mounted upload excluded from the public evidence set |
 
-```text
-isflash.bin          35,626,768 bytes
-H2OFFT-Wx64.exe
-platform.ini
-BiosImageProcx64.dll
-H2OFFT64.sys
-...
-```
+### Selected measured members
 
-Therefore `isflash.bin` and the H2OFFT files were **nested inside the EXE**, not directly inside the outer ZIP.
+Selected member paths are copied from the structured inventory, including their package-root directory. The full parent/member path is intentional: a basename alone is not an identity.
 
-This detail is important whenever a package offset is quoted.
+| Member ID | Parent package / local alias | Full member path | Size (bytes) | SHA-256 | Evidence / source coverage | Availability |
+|---|---|---|---:|---|---|---|
+| `MEM-01` | `InsydeH2OEZE_x86_WINx64_100.00.03.11.zip` | `InsydeH2OEZE_x86_WINx64_100.00.03.11.zip -> InsydeH2OEZE_x86_WINx64_100.00.03.11/H2OEZE-x64.exe` | 12,517,888 | `aadfb78a61cfb3862c3fea77eb662333334d35782c46344339e00d2d96554535` | Artifact-confirmed; selected member recomputed in `SRC-BINARIES` | Not distributed; parent upload not included in public evidence set |
+| `MEM-02` | `OSD(SKU1&SKU2).zip` | `OSD(SKU1&SKU2).zip -> 21_OSD/Apps/MechrevoOSDInstaller013.exe` | 2,009,296 | `97635596c08214f615666ac391d3dfa6e6e39085dc1d857207436de4ab4eb678` | Artifact-confirmed; selected member recomputed in `SRC-BINARIES` | Not distributed; parent upload not included in public evidence set |
+| `MEM-03` | `P916F_STX_H2OFFT_1.15_bundle.zip` | `P916F_STX_H2OFFT_1.15_bundle.zip -> P916F_STX_H2OFFT_1.15/platform.ini` | 59,202 | `ba7bbee754ec240fcba7ad8059261c4b417f1f2a3bd32f15b5d24354978a854d` | Artifact-confirmed; selected member recomputed in `SRC-BINARIES` | Not distributed; parent upload not included in public evidence set |
+| `MEM-04` | `P916F_STX_H2OFFT_1.15_bundle.zip` | `P916F_STX_H2OFFT_1.15_bundle.zip -> P916F_STX_H2OFFT_1.15/H2OFFT-Wx64.exe` | 3,004,280 | `86f336d74c2ab951d04f35143c5efaabce94a4ebe9dd87fd62b018ad7103adb0` | Artifact-confirmed; selected member recomputed in `SRC-BINARIES` | Not distributed; parent upload not included in public evidence set |
+| `MEM-05` | `jxgm_21911(2).zip` | `jxgm_21911(2).zip -> jxgm_21911/jxgmdjfwzx/OTA_setup.exe` | 34,178,800 | `6fa40846658906a3004114c0c06b2eb5a6e44202b2b436dd2e857e9b81ed8a3c` | Artifact-confirmed; selected member recomputed in `SRC-BINARIES` | Not distributed; parent upload not included in public evidence set |
 
-## Earlier BIOS-package EC extraction
+### Package enumeration coverage
 
-Before the raw current-ROM dump was available, an EC-like blob was extracted from the BIOS 1.15 updater's nested `isflash.bin`:
+The inventory also records ZIP member counts even where no selected member digest was requested. A zero in the selected column means no nested digest was retained for that package, not that the archive was empty.
 
-```text
-source chain: STX_SKU2_1.15.zip
-              -> STX_SKU2_1.15.exe (7-Zip SFX)
-              -> isflash.bin
+| Local upload alias | Enumerated members | Selected member digests |
+|---|---:|---:|
+| `ControlCenter_5.56.1.13_Mechrevo_GX(1).zip` | 193 | 0 |
+| `InsydeH2OEZE_x86_WINx64_100.00.03.11.zip` | 247 | 1 |
+| `OSD(SKU1&SKU2).zip` | 2 | 1 |
+| `P916F_STX_H2OFFT_1.15_bundle.zip` | 14 | 2 |
+| `STX_SKU2_1.09.exe` | 0 | 0 |
+| `STX_SKU2_1.15.exe` | 0 | 0 |
+| `jxgm_21911(2).zip` | 2 | 1 |
 
-offset in isflash.bin: 0x268E30
-length:                0x18000 bytes / 98,304 bytes
-SHA-256:               030ec5da8b5f027d2461af98b92416eab4a526734bee4b3032e5d9042d016023
-```
+## Embedded H2OFFT SFX inspection
 
-It contained strings including:
+`SRC-SFX` inspected `STX_SKU2_1.15.exe` offline. The source EXE has measured SHA-256 `11718b7f48a13ca08f627c1c3103cf4d1a3ee6857e15bcb165210c11e0ec446a` and an embedded 7-Zip signature at `0x3946f`. The source EXE is also the measured `STX_SKU2_1.15.exe` package row above; this is one identity observed through two inventory records, not two independent downloads.
 
-```text
-ITE EC-V14.6
-IT557x V1.09 E00 - 20230831
-AMD Motherboard
-MECHREVO
-VER:01.0F.00
-```
+| SFX member ID | Full parent/member path | Size (bytes) | SHA-256 | Evidence / source coverage | Availability |
+|---|---|---:|---|---|---|
+| `SFX-MEM-01` | `STX_SKU2_1.15.exe -> Ding.wav` | 105,886 | not retained | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-02` | `STX_SKU2_1.15.exe -> isflash.bin` | 35,626,768 | `4dd5ebb5fb5f23b0de8df0cbd60d6453cfe1f5a22f69ef34ceb24432d80094c1` | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-03` | `STX_SKU2_1.15.exe -> Microsoft.VC90.CRT.manifest` | 526 | not retained | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-04` | `STX_SKU2_1.15.exe -> Microsoft.VC90.MFC.manifest` | 550 | not retained | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-05` | `STX_SKU2_1.15.exe -> platform.ini` | 59,202 | `ba7bbee754ec240fcba7ad8059261c4b417f1f2a3bd32f15b5d24354978a854d` | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-06` | `STX_SKU2_1.15.exe -> H2OFFT.cat` | 10,574 | not retained | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-07` | `STX_SKU2_1.15.exe -> InterToolx64.efi` | 1,355,232 | not retained | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-08` | `STX_SKU2_1.15.exe -> H2OFFT.inf` | 6,668 | not retained | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-09` | `STX_SKU2_1.15.exe -> FlsHook.exe` | 42,440 | not retained | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-10` | `STX_SKU2_1.15.exe -> H2OFFT-Wx64.exe` | 3,004,280 | `86f336d74c2ab951d04f35143c5efaabce94a4ebe9dd87fd62b018ad7103adb0` | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-11` | `STX_SKU2_1.15.exe -> BiosImageProcx64.dll` | 286,664 | not retained | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-12` | `STX_SKU2_1.15.exe -> mfc90u.dll` | 1,679,864 | not retained | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-13` | `STX_SKU2_1.15.exe -> msvcp90.dll` | 851,456 | not retained | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-14` | `STX_SKU2_1.15.exe -> msvcr90.dll` | 627,200 | not retained | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-MEM-15` | `STX_SKU2_1.15.exe -> H2OFFT64.sys` | 48,008 | not retained | Artifact-confirmed; offline SFX member listing in `SRC-SFX` | Not distributed; source EXE not included |
+| `SFX-EC-CARVE` | `STX_SKU2_1.15.exe -> isflash.bin + 0x268E30` (length `0x18000`) | 98,304 | `030ec5da8b5f027d2461af98b92416eab4a526734bee4b3032e5d9042d016023` | Artifact-confirmed; offline extraction measurement in `SRC-SFX`; digest matches the historical earlier-EC record | Not distributed |
 
-This artifact was useful early in the investigation, but its **update-image** offset and 0x18000 extraction length should not be confused with the later **raw-ROM** carve at `0x081000/0x20000`.
+The SFX-selected H2OFFT metadata has two version namespaces: textual `FileVersion`/`ProductVersion` `6.73`, and numeric `VS_FIXEDFILEINFO` `6.7.3.0` inspected at H2OFFT file offset `0x2D7660`. Neither establishes a build date or live IHISI versions; those require P09.
 
-The raw-ROM carve is the preferred reference for exact code addresses in the current documentation.
+The embedded help strings `-g`, `-iv` and `-pq` describe intended utility syntax. They are static strings, not a retained invocation, dump, protection-map output or successful firmware operation.
 
-## MECHREVO Control Center GX package
+## Preserved static landmarks
 
-```text
-filename: ControlCenter_5.56.1.13_Mechrevo_GX.zip
-SHA-256: d081d2b338068ca6fd1099be2f6762d522c1223796f20a800d47034842423449
-```
+The artifact registry keeps the following baseline landmarks even when the source bytes are not distributed:
 
-Useful backend files included:
+- BIOS 1.15 boot resource: `OemBadgingSupportDxe`; GUID `931F77D1-10FE-48BF-AB72-773D389E3FAA`; format GIF; `800 x 600`; 60 frames; approximately 1.74 s. Related `BootGraphicsResourceTableDxe` GUID: `B8E62775-BB0A-43F0-A843-5BE8B14F8CCD`.
+- Type-54 / `-edt4f` callback in exact P916F BIOS: `ChipsetSvcSmm`, protocol slot `+0xA8`, callback RVA `0x221C`; compares requested type with `0x50`, and the examined nonmatching branch returns `EFI_UNSUPPORTED`.
+- Type-6D target provisioning: GUID `DACFAB69-F977-4784-8AD8-7724A6F4B440`; raw-ROM FDM table at `0x1D7C000`, 47 entries scanned; target absent from that table and from the observed Windows ESRT. Raw-ROM and live ESRT absence are separate evidence types, not a universal statement about all logo paths.
+- SetupUtility FFS GUID `FE3542FE-C1D3-4EF8-657C-8048606FF670`; Boot formset GUID `2D068309-12AC-45AB-9600-9187513CCDD8`; SystemConfig VarStore GUID `A04A27F4-DF00-4D42-B552-39511302113D`.
+- Retained runtime setup observation: `Setup[0x6E] = 0x01` for Quiet Boot at the time of the test. The SREP runtime reveal and the untested permanent PE landmark are separate records.
+- The compact bundle's native component used the historical Windows device path `\\.\ACPIDriver`, ReadEC IOCTL `0x9C40A488` and WriteEC IOCTL `0x9C40A48C`. These are provenance landmarks, not an executable interface supplied by this repository.
 
-```text
-AiStoneService/GCUBridge.exe
-AiStoneService/MyControlCenter/ACPIDriverDll.dll
-AiStoneService/MyControlCenter/GCUService.exe
-AiStoneService/MyControlCenter/GCUServicePlugin.dll
-AiStoneService/MyControlCenter/GCUUtil.exe
-```
+- Historical GX package paths retained from the baseline package context: `AiStoneService/GCUBridge.exe`, `AiStoneService/MyControlCenter/ACPIDriverDll.dll`, `AiStoneService/MyControlCenter/GCUService.exe`, `AiStoneService/MyControlCenter/GCUServicePlugin.dll` and `AiStoneService/MyControlCenter/GCUUtil.exe`. The measured package inventory has no selected member digests for these paths; they are not promoted to P916F runtime support.
 
-## Compact charge-reverse bundle
+## Missing identities and distribution policy
 
-A compact bundle used to isolate native/service components was named:
+The following nulls are deliberate and have a specific gate:
 
-```text
-P916F-charge-reverse.tar.gz
-```
+| Missing identity | Why it is not substituted | Gate |
+|---|---|---|
+| Outer `STX_SKU2_1.15.zip` size/digest | The measured child EXE is nested inside it and cannot identify the outer ZIP | P17: recover the exact outer archive bytes and hash |
+| `P916F-charge-reverse.tar.gz` size/digest | A child hash does not identify the containing bundle | P17: recover bundle bytes and hash |
+| Current raw ROM and 128 KiB EC rehash | Historical baseline identities are retained, but source bytes are not distributed | P16: obtain exact source bytes before rehashing |
+| Exact boot GIF size/digest/extraction offsets | Baseline geometry/GUID metadata does not establish a container offset | P11: recover the identified resource and extraction record |
 
-Extracted material included:
+No vendor download URL or upload timestamp is used as a substitute for a missing identity. The repository does not publish raw ROM, EC images, vendor EXE/SYS/DLL/GIF resources or private reports. A matching digest identifies bytes only; it does not certify vendor authenticity, P916F compatibility or safe execution.
 
-```text
-ACPIDriverDll.dll
-GCUService.exe
-service.ini
-AirplaneDriver-related files
-```
+## Provenance rules for new records
 
-No `ACPIDriver.sys` was present in that compact extraction.
-
-A bundle-level SHA-256 was not retained in the current documentation, so the individual binary hashes below are the stronger provenance anchors.
-
-## Native ACPIDriverDll.dll
-
-```text
-SHA-256: 97d7115943600c2a09951440859f9bd75fd0d8bff9db49c296c868b49df8c8c6
-```
-
-Observed characteristics:
-
-```text
-Windows device path: \\.\ACPIDriver
-ReadEC IOCTL:         0x9C40A488
-WriteEC IOCTL:        0x9C40A48C
-```
-
-## GCUService.exe
-
-```text
-SHA-256: 01225ef470420d50e51bc541d63dd5ed321835d40c4209106da9908c8f277a9c
-```
-
-This exact binary contained battery-protection-related type and enum names but important method bodies were not directly recoverable as normal unobfuscated logic.
-
-## Boot animation resource
-
-BIOS 1.15 contains an OEM animation with:
-
-```text
-GUID:        931F77D1-10FE-48BF-AB72-773D389E3FAA
-format:      GIF
-dimensions:  800 × 600
-frames:      60
-duration:    ~1.74 s
-association: OemBadgingSupportDxe
-```
-
-A related boot-graphics module identified during analysis is:
-
-```text
-BootGraphicsResourceTableDxe
-GUID: B8E62775-BB0A-43F0-A843-5BE8B14F8CCD
-```
-
-## Logo-only update research landmarks
-
-The detailed analysis is in [`boot-logo-research.md`](boot-logo-research.md). The important machine-specific static landmarks are preserved here so they are not lost when reproducing the work.
-
-### Type-54 / `-edt4f` callback
-
-The relevant callback in the exact P916F BIOS was located at:
-
-```text
-module:          ChipsetSvcSmm
-protocol slot:   +0xA8
-callback RVA:    0x221C
-```
-
-The callback compares the requested type against `0x50`; values that do not take that implemented branch return `EFI_UNSUPPORTED`. The examined Type-54 raw-logo route is therefore not implemented by this callback.
-
-### Type-6D target provisioning
-
-The authenticated generic logo-update path expects target GUID:
-
-```text
-DACFAB69-F977-4784-8AD8-7724A6F4B440
-```
-
-The raw ROM contains an `HFDM` / firmware device map at:
-
-```text
-raw-ROM offset: 0x1D7C000
-entries scanned: 47
-```
-
-The target GUID above was **not present** in those 47 entries.
-
-The same GUID was also absent from the Windows ESRT observed on the researched machine.
-
-These are different forms of evidence:
-
-```text
-raw-ROM FDM absence -> static provisioning evidence
-Windows ESRT absence -> live exposed-resource evidence
-```
-
-Together they strongly support the conclusion that the generic Type-6D logo component is not provisioned on this BIOS 1.15 build.
-
-## SetupUtility identifiers
-
-```text
-SetupUtility FFS GUID:
-FE3542FE-C1D3-4EF8-657C-8048606FF670
-
-Boot formset GUID:
-2D068309-12AC-45AB-9600-9187513CCDD8
-
-SystemConfig VarStore GUID used by Quiet Boot:
-A04A27F4-DF00-4D42-B552-39511302113D
-```
-
-Runtime evidence retained from the BIOS investigation includes:
-
-```text
-Setup[0x6E] = 0x01
-```
-
-for Quiet Boot at the time of the test.
-
-A successful Smokeless Runtime EFI Patcher (SREP) session was also photographed during the experiment, followed by a BIOS Boot page showing the normally suppressed Boot settings. This is runtime evidence only; no permanent SetupUtility binary patch was written as part of that reveal.
-
-## WMI Binary MOF
-
-An extracted DSDT BMOF buffer was saved during research as `WQBA.bmof`.
-
-Observed metadata:
-
-```text
-size:         1092 bytes / 0x444
-first bytes:  46 4F 4D 42 01 00 00 00 34 04 00 00 5C 10 00 00
-ASCII prefix: FOMB
-BMOF GUID:    05901221-D566-11D1-B2F0-00A0C9062910
-```
-
-## Provenance rules for future findings
-
-When adding a new low-level claim, record at minimum:
-
-- exact product/board name;
-- BIOS/EC version shown by the machine;
-- source file name;
-- source SHA-256 when available;
-- whether offsets refer to update-package layout or raw flash layout;
-- whether an address is a file offset, PE RVA, EC code address, XRAM address or host I/O/MMIO address;
-- whether the result is Live-confirmed, Static-confirmed, Inferred, Comparative only, or Rejected/Superseded.
-
-This prevents an address or conclusion from one firmware container or machine family from silently becoming a false "P916F-STX fact."
+For each future low-level artifact, record the exact product/unit and BIOS/EC version, source filename and SHA-256 when available, parent chain, offset space, address class, evidence class, source coverage and availability. Keep raw-ROM, updater-image, extracted/decompressed, FFS-relative, PE file/RVA, EC CODE/XRAM, host physical/MMIO/I/O and VarStore offsets in separate namespaces.
