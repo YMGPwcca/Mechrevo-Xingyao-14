@@ -125,11 +125,36 @@ Its exact practical behavior on this machine remains unverified. The name alone 
 
 ### Hidden Boot settings
 
-The SetupUtility suppression block and Quiet Boot question are understood statically, but the candidate binary suppression change has not been live-tested.
+The SetupUtility suppression block and Quiet Boot variable are understood substantially better than before:
+
+- Quiet Boot is at `SystemConfig + 0x6E`;
+- a live read observed `Setup[0x6E] = 0x01`;
+- SREP successfully exposed the suppressed Boot menu at runtime;
+- the candidate permanent SetupUtility suppression-byte modification itself was never written/tested.
+
+Remaining questions are therefore about the precise layout and side effects of a **permanent** form-unhide patch, not whether the hidden form can be revealed at runtime.
 
 ### Boot-logo replacement
 
-The embedded GIF resource, GUID and associated modules are known, but no low-risk runtime method has been proven that changes only the branding without a firmware rewrite.
+The two obvious generic Insyde logo-only update routes are no longer open mysteries:
+
+```text
+Type 0x54 / -edt4f
+  -> exact P916F ChipsetSvcSmm callback rejects non-0x50 type
+  -> raw-logo writer not implemented in the examined path
+
+Type 0x6D / -logoupdate
+  -> expects DACFAB69-F977-4784-8AD8-7724A6F4B440
+  -> absent from Windows ESRT
+  -> absent from the 47-entry raw-ROM FDM
+  -> expected logo target not provisioned
+```
+
+The remaining open question is narrower:
+
+> Does this BIOS contain some **third, P916F-specific** logo-update mechanism unrelated to those two standard Insyde paths?
+
+None has been found so far. Consequently there is still no proven low-risk persistent custom-logo path that avoids modifying a firmware region.
 
 ## WMI
 
