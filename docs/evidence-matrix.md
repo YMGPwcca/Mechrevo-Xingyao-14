@@ -7,7 +7,8 @@ This file is the quickest way to distinguish **what is proven**, **what is only 
 | Claim | Status | Evidence |
 |---|---|---|
 | Machine is MECHREVO Xingyao 14 / `P916F-STX` | **Live-confirmed** | Firmware/OS identity observed on the researched unit |
-| CPU is Ryzen AI 9 H 365 | **Live-confirmed** | User/live machine identity |
+| Official AMD CPU model is Ryzen AI 9 365 | **Externally confirmed / platform-confirmed** | AMD official model naming; Radeon 880M pairing matches this SKU |
+| OEM BIOS screen appears to show `AMD Ryzen AI 9 HX 365` | **Live photo/OCR observation** | Photograph of this machine's BIOS screen; kept separate from AMD's official model name |
 | iGPU is Radeon 880M | **Live/platform-confirmed** | Machine/platform observation |
 | RAM is 32 GiB on this unit | **Live-confirmed** | OS observation |
 | Internal panel is 2880×1800 | **Live-confirmed** | Prior display observation; also consistent with BGRT placement |
@@ -27,9 +28,16 @@ This file is the quickest way to distinguish **what is proven**, **what is only 
 | `OemBadgingSupportDxe` is associated with the animation | **Static-confirmed** | Firmware module/resource analysis |
 | Linux BGRT xoffset/yoffset is 1040/387 after BIOS 1.15 | **Live-confirmed** | `/sys/firmware/acpi/bgrt` observation |
 | 800-pixel image is horizontally centered on 2880-wide panel | **Corroborating inference** | `1040 + 800 + 1040 = 2880` |
-| Boot logo can be safely replaced without firmware rewrite | **Not established** | No safe runtime-only path found |
+| Insyde H2OFFT generic `-edt4f` maps to logo-update type `0x54` | **Generic mechanism confirmed; comparative context** | H2OFFT/IHISI analysis |
+| P916F `ChipsetSvcSmm` callback at RVA `0x221C` handles type `0x50` and returns `EFI_UNSUPPORTED` for other types including `0x54` | **Static-confirmed on exact P916F BIOS** | Exact `ChipsetSvcSmm` disassembly |
+| P916F has a working raw-logo Type-54 writer | **Rejected** | Exact chipset callback rejects `0x54`; no project-specific writer found |
+| Generic `-logoupdate` / type `0x6D` expects target GUID `DACFAB69-F977-4784-8AD8-7724A6F4B440` | **Generic mechanism confirmed; comparative context** | Insyde logo-update path analysis |
+| Windows ESRT on this machine contains `DACFAB69...` | **Rejected / absent in observed ESRT** | Live Windows ESRT inspection |
+| Raw-ROM FDM contains `DACFAB69...` | **Rejected / absent** | `HFDM` at raw-ROM offset `0x1D7C000`, 47 entries scanned |
+| A provisioned logo-only update mechanism is known on P916F-STX BIOS 1.15 | **Not found / currently rejected for the two standard Insyde paths** | Type54 rejected; Type6D target region absent |
+| Boot logo can be safely replaced without firmware-region rewrite | **Not established** | No enabled/provisioned runtime-only path found |
 
-## Hidden setup findings
+## Hidden / revealed setup findings
 
 | Claim | Status | Evidence |
 |---|---|---|
@@ -38,6 +46,9 @@ This file is the quickest way to distinguish **what is proven**, **what is only 
 | Quiet Boot QuestionId is `0x1064` | **Static-confirmed** | IFR analysis |
 | Quiet Boot `SystemConfig` offset is `0x6E` | **Static-confirmed** | IFR analysis |
 | Quiet Boot values are 0=Disabled / 1=Enabled | **Static-confirmed** | IFR analysis |
+| `Setup[0x6E]` was `0x01` on the researched machine | **Live-confirmed** | Runtime setup-variable read during BIOS investigation |
+| Hidden Boot form could be exposed at runtime with SREP on the researched machine | **Live-confirmed** | Smokeless Runtime EFI Patcher reported successful search/patch and subsequent BIOS Boot-menu photo shows normally hidden options |
+| A permanent firmware binary patch at SetupUtility PE offset ~`0x2636A0` was live-tested | **Not tested** | Candidate static suppression landmark only |
 | `Dynamic LID` is at `AMD_PBS_SETUP + 0xDF`, default 0 | **Static-confirmed** | Firmware form analysis |
 | Dynamic LID means "open lid to power on" | **Not established** | No live behavior mapping |
 
