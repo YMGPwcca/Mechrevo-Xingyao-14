@@ -1,41 +1,94 @@
 # Audio notes
 
-## Linux hardware path
+## Confirmed Linux codec path
 
-Linux detects the laptop's audio through AMD/Ryzen HDA/ACP-related devices. ALSA probing on the researched machine identified a **Realtek ALC256 Analog** codec path for the internal speakers.
+Live ALSA probing on the researched MECHREVO Xingyao 14 identified:
 
-PipeWire exposed the internal speakers as a normal stereo sink, with left/right channels rather than a separately exposed 2.1/4.0/LFE topology.
+```text
+Realtek ALC256 Analog
+```
 
-A representative sink name observed earlier was similar to:
+The machine's audio stack is attached through the AMD/Ryzen HDA/ACP/SOF ecosystem, but the important machine-specific endpoint is that Linux successfully detects and drives the ALC256 analog speaker path.
+
+## PipeWire/WirePlumber speaker topology
+
+A live `wpctl status` inspection exposed the internal speaker endpoint through the Ryzen HD Audio controller and showed only the normal stereo channels:
+
+```text
+output_FL
+output_FR
+```
+
+No separate Linux-visible channel was present for:
+
+```text
+LFE
+2.1
+4.0
+separate subwoofer
+```
+
+A representative sink name from the investigated installation was similar to:
 
 ```text
 alsa_output.pci-0000_c1_00.6.HiFi__Speaker__sink
 ```
 
-Exact PCI numbering can change between kernels/firmware and should not be treated as stable ABI.
+PCI numbering is installation/kernel dependent and is included only as an example, not as a stable hardware identifier.
 
-## Physical speakers vs Linux channel model
+## Physical speaker layout versus exposed channels
 
-The chassis has multiple physical speaker drivers, but Linux presented them as a **stereo FL/FR endpoint**. No dedicated subwoofer/LFE channel was exposed in the observed PipeWire graph.
+The laptop uses a multi-speaker/four-speaker OEM layout, but Linux exposes those drivers as a **single stereo FL/FR endpoint** rather than as individually addressable speakers.
 
-Therefore the multiple physical drivers are most likely paired internally into left/right speaker groups rather than being presented as independently addressable channels.
+That means the existence of multiple physical drivers does not imply that PipeWire should expose a separate subwoofer or 4-channel profile. The internal amplifier/crossover/OEM tuning can still distribute the stereo signal among physical drivers behind the codec/amp path.
 
-## Windows vs Linux sound quality
+## Windows versus Linux sound quality
 
-The laptop's Windows image/OEM stack uses **Nahimic** processing/tuning.
+The Windows OEM stack uses **Nahimic / A-Volute** processing and tuning.
 
-On Linux, raw speaker playback works, but the missing OEM DSP profile produces noticeably worse sound: thinner tonal balance, weaker perceived bass/loudness and less of the processed spatial effect heard under Windows.
+Compared with Windows, Linux playback was observed as audibly thinner/weaker, particularly in perceived bass, loudness/body and the processed spatial character.
 
-The same poor sound character reproduced in an Ubuntu live environment, so it was not specific to CachyOS or one custom PipeWire configuration.
+Crucially, the same behavior reproduced on an **Ubuntu live environment**. That makes it unlikely that the problem is merely one CachyOS user configuration or one broken PipeWire preset.
 
-## Software experiments
+The strongest current interpretation is therefore:
 
-The Linux installation has used PipeWire/WirePlumber and EasyEffects for software EQ/processing.
+```text
+basic codec / speaker playback works
++
+OEM Windows DSP/tuning is missing on Linux
+=
+functional but noticeably worse speaker sound
+```
 
-Experiments also included ordinary HDA/ALSA profile changes and kernel audio-path options, but none reproduced the OEM Windows/Nahimic tuning exactly.
+## Software experiments already tried
+
+The Linux installation has used:
+
+```text
+ALSA
+PipeWire
+WirePlumber
+EasyEffects
+```
+
+and various HDA/ACP-related configuration experiments were attempted during troubleshooting.
+
+One earlier configuration involved `dmic_detect=0`; another attempted audio-path/module options during AMD ACP/SOF debugging. None reproduced the OEM Windows/Nahimic speaker tuning exactly.
+
+These experiments should not be confused with a proven need to disable SOF/ACP on this laptop: basic audio works, and the persistent quality difference points more strongly at missing OEM DSP/EQ than at total codec-path failure.
+
+## What has not been recovered
+
+No exact Xingyao-14-specific Linux EQ/DSP profile equivalent to the OEM Nahimic configuration has been recovered yet.
+
+Potentially relevant Windows-side state includes Nahimic/A-Volute APO configuration and endpoint effect properties, but this repository currently has no validated coefficient/profile dump that can be reproduced on Linux.
 
 ## Current conclusion
 
-There is no evidence that the internal speakers are electrically unavailable or misdetected on Linux. The major gap is **OEM DSP/tuning**, not basic codec support.
+- **Codec detection:** working.
+- **Stereo speaker playback:** working.
+- **Separate LFE/subwoofer Linux channel:** not exposed.
+- **Windows OEM sound processing:** present through Nahimic/A-Volute.
+- **Linux OEM-equivalent tuning:** not recovered.
 
-Any future work should focus on obtaining/recreating an EQ/DSP profile rather than assuming the laptop needs a completely different Linux audio driver.
+Future audio work should focus on recovering or approximating the OEM DSP/EQ behavior rather than assuming the machine requires a completely different basic audio driver.
