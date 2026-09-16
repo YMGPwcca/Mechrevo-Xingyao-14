@@ -8,8 +8,7 @@ This file is the quickest way to distinguish **what is proven**, **what is only 
 |---|---|---|
 | Machine is MECHREVO Xingyao 14 / `P916F-STX` | **Live-confirmed** | Firmware/OS identity observed on the researched unit |
 | Official AMD CPU model is Ryzen AI 9 365 | **Externally confirmed / platform-confirmed** | AMD official model naming; Radeon 880M pairing matches this SKU |
-| OEM BIOS screen appears to show `AMD Ryzen AI 9 HX 365` | **Live photo/OCR observation** | Photograph of this machine's BIOS screen; kept separate from AMD's official model name |
-| iGPU is Radeon 880M | **Live/platform-confirmed** | Machine/platform observation |
+| iGPU is Radeon 880M | **Live/platform-confirmed** | Machine/platform observation; matches AMD's official Ryzen AI 9 365 specification |
 | RAM is 32 GiB on this unit | **Live-confirmed** | OS observation |
 | Internal panel is 2880×1800 | **Live-confirmed** | Prior display observation; also consistent with BGRT placement |
 | Internal panel is 1920×1080@144 | **Rejected / wrong context** | This value came from another machine/context and was removed from the P916F docs |
