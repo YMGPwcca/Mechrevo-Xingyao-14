@@ -14,7 +14,8 @@ Confirmed machine-specific identity:
 |---|---|---|
 | Product | MECHREVO Xingyao 14 | Live-confirmed |
 | Board/platform | `P916F-STX` | Live-confirmed |
-| CPU | AMD Ryzen AI 9 H 365 | Live-confirmed |
+| CPU | AMD Ryzen AI 9 365 | Official AMD model naming / platform-confirmed |
+| OEM BIOS CPU label | photographed BIOS screen appears to show `AMD Ryzen AI 9 HX 365` | Live photo/OCR observation; preserved as OEM-presented text |
 | CPU family | AMD Strix Point | Platform classification |
 | iGPU | Radeon 880M | Live/platform-confirmed |
 | RAM | 32 GiB on this unit | Live-confirmed |
@@ -22,6 +23,8 @@ Confirmed machine-specific identity:
 | EC version shown by firmware UI | `1.15` | Live-confirmed |
 | BIOS build-date string | `05/07/2026` | Live-confirmed raw string |
 | EC silicon | ITE `0x5571`, revision `0x07` | Live-confirmed through Super-I/O config space |
+
+AMD's official retail name for the processor is **Ryzen AI 9 365**; that SKU is paired with Radeon 880M graphics. A BIOS photograph from this machine appears to render/identify the processor as `AMD Ryzen AI 9 HX 365`. Because `HX 365` is not AMD's official retail model name, this repository records the BIOS label separately instead of silently using it as the canonical CPU name.
 
 The raw build-date string is retained instead of silently converting it to an ISO date because firmware date formatting can be locale/vendor dependent. If interpreted in the common Insyde/SMBIOS `MM/DD/YYYY` form, it is 2026-05-07.
 
