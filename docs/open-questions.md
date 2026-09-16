@@ -1,193 +1,52 @@
-# Open questions
+# Open technical questions
 
-This file deliberately separates unresolved questions from established facts so future work does not accidentally promote an inference into a platform truth.
+## Battery charge limit
 
-## Battery charge-limit subsystem
+- Exact user-facing meaning of `T2` / `XRAM[0x0D14]`.
+- Behavior of threshold pairs other than the validated `T1=80, T2=100` configuration.
+- Exact internal SOC resolution and rounding around the stop/restart boundary.
+- Persistence behavior across a true EC power loss or battery-controller power reset.
+- Storage mechanism responsible for persistence across a normal reboot.
 
-### Persistence across a true EC power loss
+## Charger and power path
 
-A normal reboot preserved:
+- Exact semantics of EC working words around `0x0D54..0x0D68`.
+- End-to-end confirmation of the charger transactions associated with command numbers `0x14` and `0x15`.
+- Electrical conditions under which the battery contributes energy while AC is online.
 
-```text
-state = 1
-T1    = 80
-T2    = 100
-```
+## PMC2
 
-What is **not** yet proven is persistence across a real EC power loss/reset condition—for example a battery/controller power-domain reset or battery disconnect.
+- Complete command map beyond the validated battery-control `F1/F2/F3` family.
+- Presence of a firmware/interface version query or capability query.
+- Response/error semantics beyond the single-byte responses observed in the validated transactions.
 
-A normal OS reboot is not equivalent to removing power from the EC.
+## IT5571 host access
 
-### Where the persistent state is stored
+The hypothesized dedicated I2EC interface at base `0x380` is rejected for the stock configuration. Remaining unknowns are:
 
-Because the values survived reboot, some persistence mechanism exists from the host's perspective, but the exact storage mechanism is not yet identified.
-
-Possibilities include retained EC RAM under continuously powered EC rails or explicit nonvolatile storage/reload logic. The current evidence does not justify choosing one yet.
-
-### Exact semantic role of T2 / `0x0D14`
-
-T2 is unquestionably:
-
-- a 0..100 validated field,
-- read/write through the same battery-limit command family,
-- consumed by the charge-control decision routine.
-
-What remains unresolved is its exact user-facing meaning.
-
-The successful validation used:
-
-```text
-T1 = 80
-T2 = 100
-```
-
-and produced an approximately 80% cap, which proves T1 has direct practical influence in that configuration. It does **not** prove that T2 is simply an "upper threshold," "lower threshold," recharge threshold or hysteresis value.
-
-### Other threshold pairs
-
-The firmware accepts numeric values 0 through 100 for both fields, but only `80/100` has been behaviorally validated.
-
-Questions still open:
-
-- Does `T1=70, T2=100` produce a ~70% cap?
-- Are there ordering constraints beyond what the setter itself validates?
-- Does T2 alter restart/stop behavior under some SOC range?
-- Are some combinations accepted but nonsensical?
-
-Until tested, documentation should not advertise a generic formula for arbitrary values.
-
-### Exact internal SOC resolution
-
-Linux reports integer `capacity`, while the EC compares `XRAM[0x0394]`.
-
-The observed transition occurred around displayed 79–80%, but this is insufficient to measure a precise hysteresis band or rounding rule.
-
-A better future experiment would correlate repeated direct host-visible `0xFEEC2394` reads with sysfs `capacity` around the transition.
-
-## Battery / charger power path
-
-At the cap, a stable state showed:
-
-```text
-ACAD online=1
-status=Not charging
-power_now=0
-```
-
-Under a five-minute full-CPU load, stored battery energy still decreased before charging resumed at 78%.
-
-This is consistent with battery assist / hybrid power under load, but several details remain unknown:
-
-- the adapter's actual wall/input power during the event;
-- whether the battery assists only above a platform-power threshold;
-- whether the charger intentionally uses battery assist or the adapter simply reaches a limit;
-- exact meanings of the EC working words around `0x0D54..0x0D68`;
-- full end-to-end confirmation that staged command numbers `0x14/0x15` are charger current/voltage transactions on this board.
-
-## PMC2 command family
-
-The battery-related `F1/F2/F3` commands are understood well enough for the documented validation, but the larger PMC2 protocol is not fully mapped.
-
-Open questions include:
-
-- what other top-level command bytes are implemented;
-- whether there is a version/capability query;
-- whether the battery command family has additional undocumented subcommands;
-- whether response framing/error codes exist beyond the single-byte responses observed.
-
-No brute-force command probing should be used to answer these questions.
-
-## Dedicated I2EC
-
-The hypothesized stock dedicated I2EC window at `0x380` failed a live read-only cross-check and is rejected as a usable path.
-
-Still unresolved:
-
-- whether another I2EC transport is deliberately disabled but could exist for factory/debug use;
-- the exact IT5571-D differences from available IT5570 documentation/reference work;
-- whether any safe stock host path can read arbitrary full 16-bit XRAM besides known command handlers.
-
-These questions are research-only; the working battery feature does not require solving them.
+- whether another factory/debug I2EC transport exists but is disabled;
+- IT5571-specific differences from available IT5570 documentation;
+- whether stock firmware exposes any safe generic full-XRAM read mechanism beyond known command handlers.
 
 ## Firmware setup
 
-### Dynamic LID
+- Exact runtime behavior controlled by `Dynamic LID` / `AMD_PBS_SETUP + 0xDF`.
+- Side effects and correctness of a permanent SetupUtility suppression patch around PE offset `0x2636A0`; only runtime SREP exposure has been validated.
 
-Static firmware analysis found:
+## Boot logo update
 
-```text
-Dynamic LID / AmdDynamicLid
-AMD_PBS_SETUP + 0xDF
-default 0
-```
+The standard Insyde type-`0x54` and type-`0x6D` logo-update paths are unavailable on the tested BIOS 1.15 image.
 
-Its exact practical behavior on this machine remains unverified. The name alone does not prove "open lid to power on."
-
-### Hidden Boot settings
-
-The SetupUtility suppression block and Quiet Boot variable are understood substantially better than before:
-
-- Quiet Boot is at `SystemConfig + 0x6E`;
-- a live read observed `Setup[0x6E] = 0x01`;
-- SREP successfully exposed the suppressed Boot menu at runtime;
-- the candidate permanent SetupUtility suppression-byte modification itself was never written/tested.
-
-Remaining questions are therefore about the precise layout and side effects of a **permanent** form-unhide patch, not whether the hidden form can be revealed at runtime.
-
-### Boot-logo replacement
-
-The two obvious generic Insyde logo-only update routes are no longer open mysteries:
-
-```text
-Type 0x54 / -edt4f
-  -> exact P916F ChipsetSvcSmm callback rejects non-0x50 type
-  -> raw-logo writer not implemented in the examined path
-
-Type 0x6D / -logoupdate
-  -> expects DACFAB69-F977-4784-8AD8-7724A6F4B440
-  -> absent from Windows ESRT
-  -> absent from the 47-entry raw-ROM FDM
-  -> expected logo target not provisioned
-```
-
-The remaining open question is narrower:
-
-> Does this BIOS contain some **third, P916F-specific** logo-update mechanism unrelated to those two standard Insyde paths?
-
-None has been found so far. Consequently there is still no proven low-risk persistent custom-logo path that avoids modifying a firmware region.
-
-## WMI
-
-Huawei-compatible WMI plumbing exists, but the expected battery-threshold GET `0x1103` returned unsupported/failure and SET `0x1003` was intentionally not attempted.
-
-Other WMI functions may still have undocumented meanings, but they should be decoded from this exact firmware rather than inferred from a different Huawei/MECHREVO implementation.
+Unresolved: whether P916F-STX implements a separate OEM-specific logo-update mechanism outside those two paths.
 
 ## Linux integration
 
-The charge cap works at firmware level but is not exposed through standard Linux power-supply threshold files.
+The EC charge limiter is not exposed through the generic Linux power-supply threshold ABI. A native Linux integration has not been identified.
 
-A future Linux integration would need to decide whether to expose the feature through:
+## Audio DSP
 
-- the generic power-supply charge-control ABI, or
-- a dedicated platform/EC interface.
+The exact Nahimic/A-Volute DSP/EQ configuration used by the Windows OEM stack has not been recovered.
 
-This repository intentionally remains documentation-only.
+## Firmware-version portability
 
-## Audio
-
-Linux detects ALC256 and drives the speakers, but the exact OEM Nahimic/A-Volute DSP/EQ configuration has not been recovered.
-
-The main unresolved audio task is reproducing the Windows tuning, not basic codec enumeration.
-
-## Version portability
-
-All EC command/address findings should be assumed specific to the tested P916F-STX firmware family until revalidated after a firmware update or on another unit.
-
-A future BIOS/EC revision may:
-
-- preserve the same external PMC2 protocol,
-- change internal code addresses while keeping behavior,
-- alter threshold semantics/defaults,
-- or remove/replace the command family entirely.
-
-External protocol bytes are more likely to remain stable than internal `CODE:` addresses, but even that is not guaranteed without re-testing.
+The documented internal code addresses and protocol behavior are validated against the tested BIOS/EC revision only. Compatibility with future BIOS/EC revisions has not been established.
