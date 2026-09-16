@@ -2,7 +2,25 @@
 
 The researched Xingyao 14 / `P916F-STX` has been used primarily with **CachyOS / Arch-family Linux**.
 
-This file records laptop-specific observations rather than general Linux installation instructions.
+This document records laptop-specific behavior rather than general Linux installation instructions.
+
+## Machine identity visible to Linux
+
+The retained platform identity is:
+
+```text
+MECHREVO XINGYAO Series-P916F-STX
+AMD Ryzen AI 9 H 365
+Radeon 880M
+```
+
+The internal panel on this unit was previously observed as:
+
+```text
+2880 × 1800
+```
+
+A previously documented `1920×1080 @ 144 Hz` value belonged to another machine/context and was removed during the documentation audit. No refresh-rate value is currently retained here with enough confidence to publish as a P916F-STX fact.
 
 ## Battery and AC devices
 
@@ -18,6 +36,12 @@ The AC adapter is exposed as:
 /sys/class/power_supply/ACAD
 ```
 
+Retained battery model string:
+
+```text
+588974-3S-G-A0
+```
+
 Useful battery attributes observed include:
 
 ```text
@@ -30,34 +54,69 @@ energy_now
 
 `current_now` was not present in the observed sysfs device.
 
-At the charge cap with AC connected, a representative live state was:
+Representative capped state with AC connected:
 
 ```text
-LCBT capacity   = 79%
-LCBT status     = Not charging
-LCBT power_now  = 0
-ACAD online     = 1
+capacity   = 79%
+status     = Not charging
+power_now  = 0
+energy_now = 63154000
+ACAD       = online=1
 ```
 
-The generic Linux charge-threshold attributes were not exposed.
+During the later load test the battery changed to:
 
-See [`battery-charge-limit.md`](battery-charge-limit.md).
+```text
+78%
+Charging
+power_now  = 28128000
+energy_now = 62661000
+```
+
+after a five-minute all-CPU stress interval.
+
+The charge-limit experiment and interpretation of these values are documented in [`battery-charge-limit.md`](battery-charge-limit.md).
+
+## Missing generic Linux charge-limit controls
+
+The `LCBT` power-supply device did not expose:
+
+```text
+charge_control_start_threshold
+charge_control_end_threshold
+charge_behaviour
+```
+
+The platform also had a `huawei-wmi` device, but it did not expose usable battery-charge attributes.
+
+Therefore stock Linux does not currently surface the P916F charge-limit feature through the generic power-supply threshold ABI.
 
 ## ACPI / EC behavior
 
-Linux sees a conventional ACPI battery device, but the machine also exposes a separate memory-backed EC shared-RAM window at physical address:
+Linux sees a conventional ACPI battery device, while the firmware also exposes an EC shared-memory region at physical address:
 
 ```text
 0xFEEC2300
 ```
 
-This is backed by the IT5571 H2RAM configuration and is not equivalent to the byte range exported by the `ec_sys` driver's ordinary ACPI EC interface.
+The DSDT declares it as a 256-byte `SystemMemory` operation region. Static EC analysis maps it to:
 
-The charge-limit feature is not surfaced by stock Linux power-supply sysfs; it is implemented behind an ITE PMC2 protocol.
+```text
+EC XRAM 0x0300..0x03FF
+```
 
-## Lid behavior for headless use
+This memory window is distinct from the ordinary ACPI EC byte interface and from the ITE PMC2 command interface.
 
-On systemd-based Linux, closing the lid can be configured not to suspend through `logind`.
+The working battery-cap host path is ITE PMC2:
+
+```text
+DATA            0x68
+COMMAND/STATUS  0x6C
+```
+
+## Headless / lid behavior
+
+For headless use, systemd-logind can be configured not to suspend when the lid closes.
 
 The researched installation used an override equivalent to:
 
@@ -68,19 +127,37 @@ HandleLidSwitchExternalPower=ignore
 HandleLidSwitchDocked=ignore
 ```
 
-This was verified through `systemd-analyze cat-config systemd/logind.conf`.
+The effective configuration was checked with:
 
-This is an OS policy setting only; it does not modify firmware lid behavior.
+```text
+systemd-analyze cat-config systemd/logind.conf
+```
+
+This is purely an OS policy. It does not change the firmware's physical lid signal or the ACPI `_LID` implementation.
+
+## BGRT observation after BIOS 1.15
+
+Linux exposed the post-update ACPI BGRT metadata:
+
+```text
+status  0
+type    0
+version 1
+xoffset 1040
+yoffset 387
+```
+
+The `xoffset=1040` value is geometrically consistent with an 800-pixel-wide centered image on the observed 2880-pixel-wide internal panel. See [`firmware-bios.md`](firmware-bios.md).
 
 ## Graphics / Wayland
 
-The integrated Radeon graphics stack has been used successfully under Wayland/Hyprland.
+The integrated Radeon graphics stack has been used successfully under Wayland/Hyprland on CachyOS.
 
-The internal panel was observed as `1920×1080 @ 144 Hz` on the researched unit.
+No P916F-specific graphics workaround has emerged from the firmware work described in this repository.
 
-## Power management
+## Power profiles
 
-The machine has been used with Linux `powerprofilesctl` / AMD pstate profiles such as:
+The machine has been used with Linux AMD-pstate / `powerprofilesctl` profiles such as:
 
 ```text
 performance
@@ -88,20 +165,20 @@ balanced
 power-saver
 ```
 
-These OS CPU/power-policy profiles are independent from the EC battery charge-limit feature.
+These CPU/platform power-policy profiles are independent from the EC's battery charge-limit state.
 
 ## Audio
 
-Linux audio works through ALSA/PipeWire, but OEM Windows audio processing is missing. See [`audio.md`](audio.md).
+Linux audio works through ALSA/PipeWire. The internal codec path is Realtek ALC256 Analog, and PipeWire exposes ordinary stereo FL/FR speaker channels. The missing piece compared with Windows is primarily OEM Nahimic/A-Volute processing/tuning rather than basic codec detection. See [`audio.md`](audio.md).
 
 ## Bluetooth / Wi-Fi observation
 
-On one Linux installation the wireless device was identified with Realtek `8852AU` firmware present as `rtl8852au_fw.bin.zst`. A temporary Bluetooth audio stutter was observed and stopped after toggling Wi-Fi.
+On one Linux installation the wireless stack used Realtek `8852AU` firmware (`rtl8852au_fw.bin.zst`). A temporary Bluetooth headphone stutter was observed and stopped after toggling Wi-Fi.
 
-This is recorded as an observation of the researched installation, not yet as a diagnosed platform defect.
+This remains an installation/runtime observation rather than a diagnosed P916F hardware defect.
 
-## What has not been upstreamed
+## Linux integration status
 
-At present there is no known upstream Linux driver exposing this machine's battery limit through the standard power-supply threshold interface.
+No upstream Linux driver is currently known from this investigation to expose the machine's EC charge limit as standard power-supply threshold files.
 
-The reverse-engineered EC protocol is sufficiently understood for documentation, but this repository intentionally contains **documentation only**, not a driver or userspace utility.
+The protocol is documented well enough for future driver/userspace work, but this repository intentionally remains **documentation-only**.
