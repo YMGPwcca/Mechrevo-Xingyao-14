@@ -16,8 +16,6 @@ The build-date string is recorded exactly as shown. It is likely `MM/DD/YYYY` in
 
 The update visibly changed the boot branding: the BGRT/logo changed and a pre-boot animation appeared.
 
-A photograph of the machine's BIOS screen appears to label the processor `AMD Ryzen AI 9 HX 365`. AMD's official retail processor name is `Ryzen AI 9 365`; this repository keeps the OEM BIOS label as a separate observation rather than treating `HX 365` as the canonical AMD model name.
-
 ## BIOS 1.15 package
 
 The outer vendor archive was:
