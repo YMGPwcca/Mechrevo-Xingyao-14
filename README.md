@@ -29,6 +29,7 @@ The EC also contains its own internal firmware strings such as `IT557x V1.09 E00
 ## Documents
 
 - [`docs/evidence-matrix.md`](docs/evidence-matrix.md) — compact claim-by-claim evidence/confidence matrix; start here when checking what is actually proven.
+- [`docs/live-validation-log.md`](docs/live-validation-log.md) — preserved raw outputs from the I2EC rejection, PMC2 discovery, battery-limit setup, reboot and power tests.
 - [`docs/hardware-platform.md`](docs/hardware-platform.md) — machine identity, display, battery, audio and platform observations.
 - [`docs/firmware-bios.md`](docs/firmware-bios.md) — BIOS 1.15 package, current ROM, boot animation/BGRT, hidden SetupUtility findings and Dynamic LID.
 - [`docs/embedded-controller.md`](docs/embedded-controller.md) — IT5571 EC architecture, firmware carve, H2RAM mapping, PMC2 transport, charge-control internals and the rejected I2EC hypothesis.
@@ -70,4 +71,4 @@ was live-tested and:
 
 Only the `80/100` threshold pair has been live-validated so far. The firmware accepts numeric threshold values from 0 through 100, but behavior for arbitrary values has **not** yet been experimentally mapped.
 
-The full protocol, static handler addresses and validation chronology are documented in [`docs/battery-charge-limit.md`](docs/battery-charge-limit.md).
+The full protocol, static handler addresses and validation chronology are documented in [`docs/battery-charge-limit.md`](docs/battery-charge-limit.md); the exact live outputs are preserved in [`docs/live-validation-log.md`](docs/live-validation-log.md).
