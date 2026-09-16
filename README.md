@@ -13,10 +13,9 @@ It records facts observed on the researched machine, static findings from its ow
 |---|---|---|
 | Product | MECHREVO Xingyao 14 / 机械革命 星耀14 | user/live identity |
 | Mainboard/platform | `MECHREVO XINGYAO Series-P916F-STX` | firmware/OS identity |
-| CPU | AMD Ryzen AI 9 365 | AMD official model naming; platform characteristics match |
-| OEM BIOS CPU label | a photographed BIOS screen appears to show `AMD Ryzen AI 9 HX 365` | live photo/OCR; preserved as the firmware-presented string rather than treated as AMD's official retail name |
+| CPU | AMD Ryzen AI 9 365 | AMD official model naming |
 | CPU family | AMD Strix Point | AMD/platform classification |
-| iGPU | Radeon 880M | live/platform identity; matches Ryzen AI 9 365 |
+| iGPU | Radeon 880M | AMD official platform specification / live platform identity |
 | RAM | 32 GiB on the researched machine | live |
 | Internal panel | 2880×1800 on the researched machine | prior live observation |
 | Current tested BIOS | `1.15` | live |
@@ -25,7 +24,7 @@ It records facts observed on the researched machine, static findings from its ow
 | EC silicon | ITE `0x5571`, revision `0x07` | live Super-I/O probing |
 | Primary Linux used for testing | CachyOS | live |
 
-AMD's official product name is **Ryzen AI 9 365**; AMD pairs that processor with Radeon 880M graphics. The separate `HX` token visible/recognized in the OEM BIOS screen is kept as an OEM firmware-label observation rather than silently rewriting AMD's model name.
+AMD's official product name is **Ryzen AI 9 365**. AMD specifies this Strix Point processor with 10 CPU cores / 20 threads and Radeon 880M integrated graphics. This repository uses AMD's official naming consistently.
 
 The EC also contains its own internal firmware strings such as `IT557x V1.09 E00 - 20230831`. That internal IT557x build identifier is **not the same version namespace** as the `EC 1.15` value shown by the laptop firmware UI.
 
