@@ -64,10 +64,10 @@ For a 2880-pixel-wide panel, `xoffset=1040` is consistent with an 800-pixel-wide
 
 The ACPI battery object is named `LCBT` under Linux.
 
-A battery model string retained from the earlier machine investigation is:
+Live Linux sysfs exposed:
 
 ```text
-588974-3S-G-A0
+/sys/class/power_supply/LCBT/model_name = 588974-3S-G-A0
 ```
 
 The AC adapter is exposed as `ACAD`.
@@ -101,7 +101,7 @@ output_FR
 
 No separate LFE, 2.1, 4.0 or discrete subwoofer channel was exposed to Linux.
 
-The chassis uses multiple physical speaker drivers / a multi-speaker OEM layout, but Linux presents them as a stereo endpoint rather than individually controllable speakers. Windows uses the OEM Nahimic/A-Volute processing stack; Linux basic playback works but lacks the same tuning. See [`audio.md`](audio.md).
+The user explicitly described the laptop as having **four physical speakers, two per side**. Linux nevertheless presents the internal output as a single stereo endpoint rather than four individually addressable channels. Windows uses the OEM Nahimic/A-Volute processing stack; Linux basic playback works but lacks the same tuning. See [`audio.md`](audio.md).
 
 ## Graphics and Linux desktop
 
