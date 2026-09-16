@@ -38,9 +38,11 @@ PCI numbering is installation/kernel dependent and is included only as an exampl
 
 ## Physical speaker layout versus exposed channels
 
-The laptop uses a multi-speaker/four-speaker OEM layout, but Linux exposes those drivers as a **single stereo FL/FR endpoint** rather than as individually addressable speakers.
+The user explicitly described this laptop as having **four physical speakers, two on each side**.
 
-That means the existence of multiple physical drivers does not imply that PipeWire should expose a separate subwoofer or 4-channel profile. The internal amplifier/crossover/OEM tuning can still distribute the stereo signal among physical drivers behind the codec/amp path.
+Linux still exposes the internal output as a **single stereo FL/FR endpoint**, not as four independently addressable speakers.
+
+That distinction matters: four physical drivers do not require PipeWire to expose a 4.0 or LFE topology. The codec/amplifier/crossover/OEM tuning can distribute the two logical stereo channels among multiple physical drivers internally.
 
 ## Windows versus Linux sound quality
 
@@ -86,7 +88,8 @@ Potentially relevant Windows-side state includes Nahimic/A-Volute APO configurat
 ## Current conclusion
 
 - **Codec detection:** working.
-- **Stereo speaker playback:** working.
+- **Physical speaker count:** user-reported as four, two per side.
+- **Linux logical speaker topology:** stereo FL/FR only.
 - **Separate LFE/subwoofer Linux channel:** not exposed.
 - **Windows OEM sound processing:** present through Nahimic/A-Volute.
 - **Linux OEM-equivalent tuning:** not recovered.
