@@ -2,52 +2,124 @@
 
 ## Identity
 
-**Live-confirmed / package-confirmed where noted**
+The researched machine is a **MECHREVO Xingyao 14 / 机械革命 星耀14** using the platform identifier:
 
-- Product family: **MECHREVO Xingyao 14 / 机械革命 星耀14**.
-- Mainboard/platform identifier: **`MECHREVO XINGYAO Series-P916F-STX`**.
-- Platform generation: AMD **Strix Point**.
-- The researched machine has been reported by firmware/OS tooling as a **Ryzen AI 9 365 / Ryzen AI 9 H 365 class** configuration.
-- Integrated GPU: **AMD Radeon 880M**.
-- Installed memory on the researched unit: **32 GiB**.
+```text
+MECHREVO XINGYAO Series-P916F-STX
+```
 
-The exact retail CPU naming used by MECHREVO can vary between product listings and OS strings. This repository records firmware and OS observations rather than normalizing the marketing name.
+Confirmed machine-specific identity:
 
-## Firmware identity
+| Item | Observed value | Confidence |
+|---|---|---|
+| Product | MECHREVO Xingyao 14 | Live-confirmed |
+| Board/platform | `P916F-STX` | Live-confirmed |
+| CPU | AMD Ryzen AI 9 H 365 | Live-confirmed |
+| CPU family | AMD Strix Point | Platform classification |
+| iGPU | Radeon 880M | Live/platform-confirmed |
+| RAM | 32 GiB on this unit | Live-confirmed |
+| BIOS | `1.15` | Live-confirmed |
+| EC version shown by firmware UI | `1.15` | Live-confirmed |
+| BIOS build-date string | `05/07/2026` | Live-confirmed raw string |
+| EC silicon | ITE `0x5571`, revision `0x07` | Live-confirmed through Super-I/O config space |
 
-- Tested BIOS: **1.15**.
-- Tested EC version exposed by BIOS: **1.15**.
-- BIOS build date: **2026-05-07**.
-- The current firmware image contains an ITE EC firmware identifying itself with strings including:
-  - `ITE EC-V14.6`
-  - `IT557x V1.09 E00 - 20230831`
-- Live Super-I/O probing identifies the EC as **ITE `0x5571`, revision `0x07`**.
+The raw build-date string is retained instead of silently converting it to an ISO date because firmware date formatting can be locale/vendor dependent. If interpreted in the common Insyde/SMBIOS `MM/DD/YYYY` form, it is 2026-05-07.
 
-See [`firmware-bios.md`](firmware-bios.md) and [`embedded-controller.md`](embedded-controller.md) for the distinction between BIOS/EC package version numbers and the internal IT557x firmware string.
+## BIOS/EC version namespaces
 
-## Graphics and display observations
+There are several different version strings in the machine and they should not be conflated:
 
-On Linux, the machine has been used with the integrated Radeon graphics stack. The display path is functional under Wayland/Hyprland.
+```text
+Laptop firmware UI:      BIOS 1.15 / EC 1.15
+IT557x firmware string:  IT557x V1.09 E00 - 20230831
+Other EC metadata:       ITE EC-V14.6
+                         VER:01.0F.00
+```
 
-A previously observed internal panel configuration on the user's Linux installation was `1920×1080 @ 144 Hz`. This is recorded as an observation of the researched unit, not a claim that every Xingyao 14 SKU uses the same panel.
+These values come from different layers/build systems. The internal `V1.09` string does not mean the laptop is still running the old system BIOS 1.09.
+
+## Display
+
+The researched unit's internal panel was previously observed as:
+
+```text
+2880 × 1800
+```
+
+No refresh-rate value is currently retained with the same confidence, so this repository deliberately does **not** assign one.
+
+After the BIOS 1.15 update, Linux ACPI BGRT metadata was observed as:
+
+```text
+status  = 0
+type    = 0
+version = 1
+xoffset = 1040
+yoffset = 387
+```
+
+For a 2880-pixel-wide panel, `xoffset=1040` is consistent with an 800-pixel-wide centered boot image (`1040 + 800 + 1040 = 2880`), matching the 800×600 firmware animation resource found statically. The BGRT and animation details are documented in [`firmware-bios.md`](firmware-bios.md).
+
+## Battery
+
+The ACPI battery object is named `LCBT` under Linux.
+
+A battery model string retained from the earlier machine investigation is:
+
+```text
+588974-3S-G-A0
+```
+
+The AC adapter is exposed as `ACAD`.
+
+Linux battery telemetry used during the charge-limit validation includes:
+
+```text
+capacity
+status
+voltage_now
+power_now
+energy_now
+```
+
+On this machine `current_now` was not present in the observed `LCBT` sysfs directory.
 
 ## Audio hardware
 
-Linux exposes the internal speaker path through the AMD/Ryzen HD-audio controller; ALSA probing identified a **Realtek ALC256 Analog** codec path. The physical machine has multiple speaker drivers, but Linux presents the internal speakers as a normal stereo FL/FR sink rather than exposing a separate subwoofer/LFE channel.
+ALSA probing identified the internal analog codec path as:
 
-Windows audio quality is substantially better because the OEM stack includes **Nahimic** tuning/DSP. Linux playback itself works, but without the Windows DSP profile the sound has been observed as thinner/weaker. This behavior reproduced on an Ubuntu live environment as well, so it is not specific to CachyOS.
+```text
+Realtek ALC256 Analog
+```
 
-See [`audio.md`](audio.md).
+Live PipeWire/WirePlumber inspection exposed the internal speaker endpoint as ordinary stereo:
+
+```text
+output_FL
+output_FR
+```
+
+No separate LFE, 2.1, 4.0 or discrete subwoofer channel was exposed to Linux.
+
+The chassis uses multiple physical speaker drivers / a multi-speaker OEM layout, but Linux presents them as a stereo endpoint rather than individually controllable speakers. Windows uses the OEM Nahimic/A-Volute processing stack; Linux basic playback works but lacks the same tuning. See [`audio.md`](audio.md).
+
+## Graphics and Linux desktop
+
+The integrated Radeon graphics path has been used successfully under Wayland/Hyprland on CachyOS. Nothing found in the firmware research indicates that a proprietary graphics driver is required for the internal panel.
 
 ## Storage / dual-boot context
 
-The researched machine has been used in a Windows 11 + Linux dual-boot configuration with UEFI booting. Bootloader experiments included GRUB/shim/sbctl and later systemd-boot/Limine on different stages of the setup. These are installation choices on the researched unit, not firmware requirements of the platform.
+The researched machine has been used in a Windows 11 + Linux dual-boot configuration with UEFI booting. Different installation stages used GRUB/shim/sbctl, systemd-boot and later Limine. Those are installation choices, not platform requirements.
 
-## Related platforms
+## Related platforms are not interchangeable
 
-Firmware research encountered sibling P916F variants including names such as:
+Research encountered sibling or similarly named variants including:
 
-- `P916F-HPT-R`
-- `P916F-ARL`
+```text
+P916F-HPT-R
+P916F-ARL
+```
 
-They should be treated as **different targets**. Similar naming does not make their BIOS or EC firmware safe to cross-flash onto `P916F-STX`.
+They must be treated as **different firmware targets**. A common `P916F` prefix or similar chassis does not make their BIOS/EC images safe to cross-flash onto `P916F-STX`.
+
+The same rule applies to EC register maps: generic Uniwill/Tongfang/other IT5571 offsets are comparative evidence only until the P916F-STX's own firmware or live hardware confirms them.
