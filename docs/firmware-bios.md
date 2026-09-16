@@ -16,6 +16,8 @@ The build-date string is recorded exactly as shown. It is likely `MM/DD/YYYY` in
 
 The update visibly changed the boot branding: the BGRT/logo changed and a pre-boot animation appeared.
 
+A photograph of the machine's BIOS screen appears to label the processor `AMD Ryzen AI 9 HX 365`. AMD's official retail processor name is `Ryzen AI 9 365`; this repository keeps the OEM BIOS label as a separate observation rather than treating `HX 365` as the canonical AMD model name.
+
 ## BIOS 1.15 package
 
 The outer vendor archive was:
@@ -71,11 +73,11 @@ BIOS 1.15 contains an OEM animated resource rather than only a static BMP.
 Static analysis found:
 
 ```text
-format:    animated GIF
+format:     animated GIF
 dimensions: 800 × 600
-frames:    60
-duration:  ~1.74 seconds
-GUID:      931F77D1-10FE-48BF-AB72-773D389E3FAA
+frames:     60
+duration:   ~1.74 seconds
+GUID:       931F77D1-10FE-48BF-AB72-773D389E3FAA
 ```
 
 The resource is associated with `OemBadgingSupportDxe`.
@@ -103,13 +105,52 @@ The internal display was observed as 2880×1800. An 800-pixel-wide image centere
 
 This geometric consistency is useful corroboration, but BGRT itself describes the boot image presented to the OS; it is not a generic runtime API for replacing the firmware resource.
 
-## Logo replacement status
+## Logo-only update mechanisms
 
-No safe runtime-only path has been proven for changing just the MECHREVO boot image/animation.
+A later audit followed the two obvious generic Insyde logo-update mechanisms into the exact P916F-STX BIOS 1.15 implementation.
 
-The branding asset lives inside UEFI firmware structures. Replacing it would require preserving the relevant FFS/FV structure, compression, alignment/checksums and flash layout. A valid-looking image file alone is not sufficient.
+### H2OFFT `-edt4f` / IHISI Type 0x54
 
-Because the machine is already running a known-good BIOS, this repository treats boot-logo replacement as **static reverse-engineering knowledge, not a proven safe modification procedure**.
+The generic Insyde route maps a logo extra-data operation to IHISI Type `0x54`.
+
+On this machine, the relevant `ChipsetSvcSmm` callback was identified at:
+
+```text
+protocol +0xA8
+RVA 0x221C
+```
+
+The exact code handles type `0x50` and returns `EFI_UNSUPPORTED` for other values. Consequently the examined P916F path does **not** implement the project-specific Type-54 raw-logo writer.
+
+### H2OFFT `-logoupdate` / Type 0x6D
+
+The generic authenticated logo-update mechanism expects a target identified by:
+
+```text
+DACFAB69-F977-4784-8AD8-7724A6F4B440
+```
+
+Machine-specific checks found:
+
+```text
+Windows ESRT: no DACFAB69... entry
+raw-ROM HFDM at 0x1D7C000: 47 entries, no DACFAB69... entry
+```
+
+Thus the expected dedicated Type-6D logo target is not provisioned in the tested BIOS image.
+
+### Current logo-replacement conclusion
+
+For BIOS 1.15:
+
+```text
+Type 0x54 raw logo update  -> exact P916F callback rejects it
+Type 0x6D signed logo      -> required target region not provisioned
+```
+
+No enabled/provisioned logo-only update path has therefore been established on this machine. This does not mathematically rule out every conceivable third OEM-specific mechanism, but neither of the standard Insyde paths investigated is usable as a proven low-risk logo updater.
+
+The complete evidence chain is in [`boot-logo-research.md`](boot-logo-research.md).
 
 ## Insyde SetupUtility
 
@@ -129,7 +170,7 @@ These exact identifiers supersede the earlier shortened note `FE3542...`.
 
 ## Quiet Boot
 
-Static IFR/SetupUtility analysis identified the hidden **Quiet Boot** question.
+Static IFR/SetupUtility analysis identified the **Quiet Boot** question.
 
 Known details:
 
@@ -142,15 +183,41 @@ VarStore offset:    0x6E
 0x01:               Enabled
 ```
 
-The relevant Boot settings block was under a `SuppressIf (TRUE)` condition. A static binary-analysis note identified a candidate suppression opcode location around SetupUtility PE offset:
+A live runtime read on the researched machine observed:
+
+```text
+Setup[0x6E] = 0x01
+```
+
+so Quiet Boot was enabled at that point.
+
+### Stock suppression and SREP runtime reveal
+
+The relevant Boot settings block was located under a `SuppressIf (TRUE)` condition in the static IFR.
+
+A static binary-analysis landmark identified the suppression expression around SetupUtility PE offset:
 
 ```text
 0x2636A0
 ```
 
-with a candidate byte-level change discussed during analysis (`0x46 -> 0x47`) to alter the suppression expression.
+with a candidate byte-level change discussed during analysis (`0x46 -> 0x47`). That permanent binary firmware modification was **not live-tested** and should remain only a reverse-engineering landmark.
 
-That candidate was **not live-tested** and should be treated only as a reverse-engineering landmark. The suppression block also covers more than one Boot setting, so changing it would not be a narrowly scoped "show Quiet Boot only" operation.
+Separately, **Smokeless Runtime EFI Patcher (SREP)** was actually booted on the machine. Its console reported a successful search/patch result, and the subsequently visible BIOS Boot page contained options including:
+
+```text
+Quick Boot
+Quiet Boot
+Network Stack
+PXE Boot Capability
+USB Boot
+UEFI OS Fast Boot
+```
+
+Therefore the repository distinguishes clearly between:
+
+- **static permanent firmware patch candidate** — not applied/tested;
+- **runtime SREP reveal of the suppressed Boot form** — observed working on the real machine.
 
 ## Dynamic LID / AmdDynamicLid
 
