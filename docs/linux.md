@@ -14,7 +14,7 @@ AMD Ryzen AI 9 365
 Radeon 880M
 ```
 
-AMD's official model name is `Ryzen AI 9 365`. A photographed OEM BIOS screen appears to label the processor `AMD Ryzen AI 9 HX 365`; that OEM firmware string is recorded separately in [`hardware-platform.md`](hardware-platform.md) rather than used as the canonical AMD model name.
+The CPU name used throughout this repository is AMD's official model name: `Ryzen AI 9 365`.
 
 The internal panel on this unit was previously observed as:
 
