@@ -4,15 +4,17 @@ The researched Xingyao 14 / `P916F-STX` has been used primarily with **CachyOS /
 
 This document records laptop-specific behavior rather than general Linux installation instructions.
 
-## Machine identity visible to Linux
+## Machine identity visible to Linux / platform identity
 
 The retained platform identity is:
 
 ```text
 MECHREVO XINGYAO Series-P916F-STX
-AMD Ryzen AI 9 H 365
+AMD Ryzen AI 9 365
 Radeon 880M
 ```
+
+AMD's official model name is `Ryzen AI 9 365`. A photographed OEM BIOS screen appears to label the processor `AMD Ryzen AI 9 HX 365`; that OEM firmware string is recorded separately in [`hardware-platform.md`](hardware-platform.md) rather than used as the canonical AMD model name.
 
 The internal panel on this unit was previously observed as:
 
