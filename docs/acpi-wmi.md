@@ -33,6 +33,25 @@ The machine also has the conventional ACPI EC host ports around `0x62/0x66` for 
 
 That path is separate from the additional ITE **PMC2** logical device later found live at `0x68/0x6C`.
 
+## Lid device
+
+ACPI exposes a standard lid object:
+
+```text
+_HID = PNP0C0D
+```
+
+Its `_LID` method reads the EC-backed `LIDS` bit. In the decompiled AML:
+
+```text
+LIDS == 0 -> _LID returns 0
+otherwise -> _LID returns 1
+```
+
+An EC query handler `_Q81` calls `Notify (LID, 0x80)` to report a status change.
+
+This is the firmware-level lid-status path and is separate from Linux `systemd-logind` policy about what the OS should do when the lid closes.
+
 ## Battery object: LCBT
 
 The ACPI battery object is `LCBT`, and Linux exposes it as:
@@ -66,6 +85,25 @@ Offset 0x30:
   ACIN  bit6
   ACLW  bit7
 
+Offset 0x31:
+  PBST  bit0
+  LIDS  bit1
+  PBS2  bit6
+
+Offset 0x32:
+  TPST  bit0
+  KBFN  bit1
+
+Offset 0x33:
+  KBBL  8 bits
+
+Offset 0x34:
+  WINS  bit0
+  CPLS  bit1
+
+Offset 0x35:
+  KBST  16 bits
+
 Offset 0x80:
   BATI  bit0
   BAII  bit1
@@ -91,7 +129,110 @@ Other fields:
   0xFE  TEMP
 ```
 
-The exact symbolic names above come from the AML field declarations. Their higher-level units/semantics should be inferred from the AML consumers rather than guessed solely from their abbreviations.
+The exact symbolic names above come from the AML field declarations. Their higher-level semantics should be established from their AML consumers rather than guessed solely from abbreviations.
+
+## OEM ACPI control methods
+
+The DSDT contains several small host-callable methods that expose EC-backed laptop controls. These methods return a 256-byte buffer whose first byte is used as a status field.
+
+### Fn-lock state
+
+```text
+GFLS -> reads EC field KBFN
+SFLS -> accepts only 0 or 1 and writes EC field KBFN
+```
+
+`SFLS` contains explicit firmware debug strings identifying the two states as:
+
+```text
+Fn lock
+Fn unlock
+```
+
+so the semantic mapping is unusually clear here.
+
+### Windows-key lock state
+
+```text
+GWLS -> reads EC field WINS
+SWLS -> accepts only 0 or 1 and writes EC field WINS
+```
+
+`SWLS` contains explicit debug strings:
+
+```text
+WMI Request Win lock
+WMI Request Win unlock
+```
+
+### Copilot-key lock state
+
+```text
+GCLS -> reads EC field CPLS
+SCLS -> accepts only 0 or 1 and writes EC field CPLS
+```
+
+`SCLS` explicitly logs:
+
+```text
+WMI Request Copilot lock
+WMI Request Copilot unlock
+```
+
+### TPST state/control pair
+
+The methods:
+
+```text
+GTPS -> reads EC field TPST
+STPS -> accepts only 0 or 1
+```
+
+are paired with EC commands:
+
+```text
+requested state 1 -> ECMD(0x90)
+requested state 0 -> ECMD(0x8F)
+```
+
+The field/method naming and event flow identify this as a two-state platform input-device control path. The exact end-user polarity/behavior should still be considered unverified until exercised live rather than inferred only from names.
+
+### Interface version method
+
+`GVER` returns:
+
+```text
+0x00020004
+```
+
+as its data DWORD. This appears to be the OEM ACPI/WMI interface version advertised by this firmware path; no broader semantic interpretation has been required for the battery work.
+
+## EC query -> WMI event mapping
+
+Several EC query handlers convert hardware-state changes into WMI notifications through `WMI1.WMEN` followed by `Notify (WMI1, 0xA0)`.
+
+Known examples from the AML include:
+
+```text
+_Q0C:
+  TPST == 0 -> WMEN = 0x30
+  TPST == 1 -> WMEN = 0x31
+
+_Q11:
+  KBBL == 0 -> WMEN = 0x20
+  KBBL == 1 -> WMEN = 0x21
+  KBBL == 2 -> WMEN = 0x22
+
+_Q17:
+  KBFN == 0 -> WMEN = 0x50
+  KBFN == 1 -> WMEN = 0x51
+
+_Q10 -> WMEN = 0xA1
+_Q12 -> WMEN = 0xA0
+_Q18 -> WMEN = 0xA2
+```
+
+The first three groups can be correlated directly with named EC state fields. The exact user-facing meanings of the standalone `0xA0/0xA1/0xA2` events were not established in this investigation and are therefore left unnamed.
 
 ## Live battery model / Linux identity
 
