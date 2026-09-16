@@ -18,15 +18,32 @@ The update visibly changed the boot branding: the BGRT/logo changed and a pre-bo
 
 ## BIOS 1.15 package
 
-A vendor package named `STX_SKU2_1.15.zip` / corresponding packaged updater content was inspected. It uses the Insyde H2O flash stack and contains at least:
+The outer vendor archive was:
 
 ```text
-H2OFFT-Wx64.exe
-isflash.bin
-platform.ini
+STX_SKU2_1.15.zip
 ```
 
-The updater configuration contains:
+It contained **one updater executable**:
+
+```text
+STX_SKU2_1.15.exe
+```
+
+That EXE was a 7-Zip SFX. Extracting the EXE—not merely the outer ZIP—produced the Insyde H2O payload, including:
+
+```text
+isflash.bin              35,626,768 bytes
+H2OFFT-Wx64.exe
+platform.ini
+BiosImageProcx64.dll
+H2OFFT64.sys
+...
+```
+
+This nesting matters for provenance: `isflash.bin` was **not directly stored in the outer ZIP**.
+
+The extracted updater configuration contains:
 
 ```text
 [FlashComplete]
