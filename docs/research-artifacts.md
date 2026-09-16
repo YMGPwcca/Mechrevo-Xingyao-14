@@ -30,15 +30,47 @@ This full 128 KiB carve is the EC image used for the detailed battery-limit reve
 
 The first 64 KiB bank is dense; the second bank is sparse but contains real data/code and should not be mistaken for a separate unrelated EC image.
 
-## Earlier BIOS-package EC extraction
+## BIOS 1.15 updater packaging
 
-Before the raw current-ROM dump was available, an EC-like blob was extracted from the BIOS 1.15 update package's embedded `isflash.bin`:
+The outer vendor archive was:
 
 ```text
-source:     BIOS 1.15 package / embedded isflash.bin
-offset:     0x268E30
-length:     0x18000 bytes / 98,304 bytes
-SHA-256:    030ec5da8b5f027d2461af98b92416eab4a526734bee4b3032e5d9042d016023
+STX_SKU2_1.15.zip
+```
+
+The ZIP contained one file:
+
+```text
+STX_SKU2_1.15.exe
+```
+
+The EXE was a 7-Zip self-extracting archive. Extracting the EXE yielded the Insyde payload, including:
+
+```text
+isflash.bin          35,626,768 bytes
+H2OFFT-Wx64.exe
+platform.ini
+BiosImageProcx64.dll
+H2OFFT64.sys
+...
+```
+
+Therefore `isflash.bin` and the H2OFFT files were **nested inside the EXE**, not directly inside the outer ZIP.
+
+This detail is important whenever a package offset is quoted.
+
+## Earlier BIOS-package EC extraction
+
+Before the raw current-ROM dump was available, an EC-like blob was extracted from the BIOS 1.15 updater's nested `isflash.bin`:
+
+```text
+source chain: STX_SKU2_1.15.zip
+              -> STX_SKU2_1.15.exe (7-Zip SFX)
+              -> isflash.bin
+
+offset in isflash.bin: 0x268E30
+length:                0x18000 bytes / 98,304 bytes
+SHA-256:               030ec5da8b5f027d2461af98b92416eab4a526734bee4b3032e5d9042d016023
 ```
 
 It contained strings including:
@@ -51,7 +83,7 @@ MECHREVO
 VER:01.0F.00
 ```
 
-This artifact was useful early in the investigation, but its package-layout offset/length should **not** be confused with the later raw-ROM carve at `0x081000/0x20000`.
+This artifact was useful early in the investigation, but its **update-image** offset and 0x18000 extraction length should not be confused with the later **raw-ROM** carve at `0x081000/0x20000`.
 
 The raw-ROM carve is the preferred reference for exact code addresses in the current documentation.
 
@@ -115,34 +147,16 @@ SHA-256: 01225ef470420d50e51bc541d63dd5ed321835d40c4209106da9908c8f277a9c
 
 This exact binary contained battery-protection-related type and enum names but important method bodies were not directly recoverable as normal unobfuscated logic.
 
-## BIOS updater package
-
-The vendor BIOS 1.15 package was referred to during research as:
-
-```text
-STX_SKU2_1.15.zip
-```
-
-and contained Insyde H2O flash tooling such as:
-
-```text
-H2OFFT-Wx64.exe
-isflash.bin
-platform.ini
-```
-
-The raw 32 MiB current-ROM dump and the update-package layout are distinct artifacts; offsets must never be transferred between them without establishing the mapping.
-
 ## Boot animation resource
 
 BIOS 1.15 contains an OEM animation with:
 
 ```text
-GUID:       931F77D1-10FE-48BF-AB72-773D389E3FAA
-format:     GIF
-dimensions: 800 × 600
-frames:     60
-duration:   ~1.74 s
+GUID:        931F77D1-10FE-48BF-AB72-773D389E3FAA
+format:      GIF
+dimensions:  800 × 600
+frames:      60
+duration:    ~1.74 s
 association: OemBadgingSupportDxe
 ```
 
