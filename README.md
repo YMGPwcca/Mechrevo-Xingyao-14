@@ -13,9 +13,10 @@ It records facts observed on the researched machine, static findings from its ow
 |---|---|---|
 | Product | MECHREVO Xingyao 14 / 机械革命 星耀14 | user/live identity |
 | Mainboard/platform | `MECHREVO XINGYAO Series-P916F-STX` | firmware/OS identity |
-| CPU | AMD Ryzen AI 9 H 365 | user/live identity |
-| CPU family | AMD Strix Point | platform classification |
-| iGPU | Radeon 880M | live/platform identity |
+| CPU | AMD Ryzen AI 9 365 | AMD official model naming; platform characteristics match |
+| OEM BIOS CPU label | a photographed BIOS screen appears to show `AMD Ryzen AI 9 HX 365` | live photo/OCR; preserved as the firmware-presented string rather than treated as AMD's official retail name |
+| CPU family | AMD Strix Point | AMD/platform classification |
+| iGPU | Radeon 880M | live/platform identity; matches Ryzen AI 9 365 |
 | RAM | 32 GiB on the researched machine | live |
 | Internal panel | 2880×1800 on the researched machine | prior live observation |
 | Current tested BIOS | `1.15` | live |
@@ -24,6 +25,8 @@ It records facts observed on the researched machine, static findings from its ow
 | EC silicon | ITE `0x5571`, revision `0x07` | live Super-I/O probing |
 | Primary Linux used for testing | CachyOS | live |
 
+AMD's official product name is **Ryzen AI 9 365**; AMD pairs that processor with Radeon 880M graphics. The separate `HX` token visible/recognized in the OEM BIOS screen is kept as an OEM firmware-label observation rather than silently rewriting AMD's model name.
+
 The EC also contains its own internal firmware strings such as `IT557x V1.09 E00 - 20230831`. That internal IT557x build identifier is **not the same version namespace** as the `EC 1.15` value shown by the laptop firmware UI.
 
 ## Documents
@@ -31,7 +34,8 @@ The EC also contains its own internal firmware strings such as `IT557x V1.09 E00
 - [`docs/evidence-matrix.md`](docs/evidence-matrix.md) — compact claim-by-claim evidence/confidence matrix; start here when checking what is actually proven.
 - [`docs/live-validation-log.md`](docs/live-validation-log.md) — preserved raw outputs from the I2EC rejection, PMC2 discovery, battery-limit setup, reboot and power tests.
 - [`docs/hardware-platform.md`](docs/hardware-platform.md) — machine identity, display, battery, audio and platform observations.
-- [`docs/firmware-bios.md`](docs/firmware-bios.md) — BIOS 1.15 package, current ROM, boot animation/BGRT, hidden SetupUtility findings and Dynamic LID.
+- [`docs/firmware-bios.md`](docs/firmware-bios.md) — BIOS 1.15 package, current ROM, boot animation/BGRT, SetupUtility findings and Dynamic LID.
+- [`docs/boot-logo-research.md`](docs/boot-logo-research.md) — detailed analysis of the two Insyde logo-only update paths and why neither is provisioned/usable on this BIOS 1.15 build.
 - [`docs/embedded-controller.md`](docs/embedded-controller.md) — IT5571 EC architecture, firmware carve, H2RAM mapping, PMC2 transport, charge-control internals and the rejected I2EC hypothesis.
 - [`docs/battery-charge-limit.md`](docs/battery-charge-limit.md) — exact P916F battery-limit command family, static handlers and live validation.
 - [`docs/acpi-wmi.md`](docs/acpi-wmi.md) — DSDT EC mapping, battery object, Huawei-compatible WMI and negative results from other charge-limit paths.
