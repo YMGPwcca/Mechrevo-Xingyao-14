@@ -1,29 +1,25 @@
-# Boot-logo / OEM-badging research
+# Boot-logo and OEM-badging investigation
 
-This document records the detailed investigation into whether the MECHREVO boot animation/logo on `P916F-STX` BIOS 1.15 can be changed **without rebuilding and reflashing the firmware image**.
+## Scope and conclusion
 
-The short result is:
+The investigation examined whether the P916F-STX BIOS 1.15 boot animation could be replaced through a dedicated logo-update service rather than rebuilding and reflashing firmware regions. The retained evidence identifies blockers in two generic Insyde paths. **No working logo-only update mechanism has been established for the examined build.** This is a bounded result for those paths, not a proof that every possible OEM-specific mechanism is absent.
 
-> **No enabled/provisioned logo-only update mechanism was found in this BIOS 1.15 build.**
+Sources are the baseline report S1 and the retained logo analysis S10 in the [project source register](research-sources.md#project-sources). Module landmarks and provisioning results are preserved from those reports; they were not reproduced from a newly available raw ROM during consolidation.
 
-Two generic Insyde mechanisms were investigated. The exact P916F firmware rejects the raw Type-54 route, while the authenticated Type-6D route lacks its required target region on this machine.
-
-This conclusion is specific to the researched P916F-STX BIOS 1.15 image.
-
-## Embedded OEM animation
-
-The current BIOS contains an OEM animated GIF:
+## Embedded resource and BGRT observation
 
 ```text
-format:      GIF
-dimensions:  800 × 600
-frames:      60
-duration:    ~1.74 s
-GUID:        931F77D1-10FE-48BF-AB72-773D389E3FAA
-association: OemBadgingSupportDxe
+Resource GUID: 931F77D1-10FE-48BF-AB72-773D389E3FAA
+Format:        animated GIF
+Dimensions:    800 x 600
+Frame count:   60
+Duration:      approximately 1.74 s
+Association:   OemBadgingSupportDxe
 ```
 
-Linux BGRT metadata after the BIOS update reported:
+The related `BootGraphicsResourceTableDxe` GUID is `B8E62775-BB0A-43F0-A843-5BE8B14F8CCD`.
+
+Recorded Linux BGRT values:
 
 ```text
 status  = 0
@@ -33,46 +29,23 @@ xoffset = 1040
 yoffset = 387
 ```
 
-On the observed 2880×1800 panel, `xoffset=1040` is geometrically consistent with an 800-pixel-wide image centered horizontally:
+For the recorded 2880-pixel-wide panel, `1040 + 800 + 1040 = 2880`. The geometry is consistent with horizontal centering of an 800-pixel resource. It does not establish that the BGRT object is itself the animation or that BGRT offers a persistent logo-update mechanism. The status value is retained without treating it as an unconditional displayed-image assertion.
+
+The resource's exact byte size, SHA-256 and decompressed-container offsets require the identified resource/container and extraction record (P11, [pending evidence](documentation-status.md#pending-evidence)). A decompressed-container offset must not be relabeled as a raw-ROM offset.
+
+## Examined Type-0x54 extra-data path
+
+The retained generic Insyde analysis maps H2OFFT extra-data type 4, represented by the option name `-edt4f`, to OEM extra-data type `0x54`. Support for an option in a utility does not establish a corresponding writer in the target firmware.
+
+The examined P916F `ChipsetSvcSmm` callback was identified as:
 
 ```text
-1040 + 800 + 1040 = 2880
+Module:       ChipsetSvcSmm
+Protocol slot: +0xA8
+Callback RVA:  0x221C
 ```
 
-That is useful corroboration that the firmware-extracted 800×600 resource is closely related to the boot branding presented on the real machine.
-
-## Insyde route #1: H2OFFT `-edt4f` / IHISI Type 0x54
-
-Insyde H2OFFT has a generic extra-data mechanism whose documented logo-style usage takes a form such as:
-
-```text
-H2OFFT-Wx64.exe -edt4f:<image>
-```
-
-The relevant generic flow identified during the investigation is:
-
-```text
--edt4f
-  -> Extra Data Type 4
-  -> IHISI OEM extra-data type 0x54
-  -> LogoUpdate path
-```
-
-The fact that H2OFFT understands this option does **not** mean the target BIOS implements the corresponding OEM writer.
-
-### Exact P916F `ChipsetSvcSmm` result
-
-The P916F-STX BIOS 1.15 `ChipsetSvcSmm` module was inspected directly.
-
-The callback used by the relevant IHISI extra-data service was located at:
-
-```text
-ChipsetSvcSmm
-protocol +0xA8
--> RVA 0x221C
-```
-
-The decisive code is equivalent to:
+The decisive disassembly recorded in the report is:
 
 ```asm
 221C  cmp cl, 50h
@@ -81,192 +54,57 @@ The decisive code is equivalent to:
 222B  ret
 ```
 
-Semantically:
+The examined callback handles type `0x50`, associated in the report with the OA3 path, and rejects other values through `EFI_UNSUPPORTED`. Type `0x54` is therefore unsupported at this callback. Type `0x6D` also falls through this callback, but the separate authenticated mechanism must be evaluated on its own path rather than inferred solely from this comparison.
 
-```text
-if type == 0x50:
-    use the implemented OA3-oriented path
-else:
-    return EFI_UNSUPPORTED
-```
+This is the basis for rejecting the examined Type-0x54 raw-logo route on the tested build. It does not justify attempting the utility option against the machine.
 
-For the types relevant to this research:
+## Examined authenticated Type-0x6D path
 
-```text
-0x50  -> handled by this callback
-0x54  -> EFI_UNSUPPORTED
-0x6D  -> EFI_UNSUPPORTED in this callback
-```
-
-The generic Insyde source/reference behavior examined during the investigation is consistent with this: a project-specific OEM implementation is required for the Type-54 logo writer, while the default hook may simply return `EFI_UNSUPPORTED`.
-
-### Type-54 conclusion
-
-No P916F-specific raw-logo writer was found behind the examined Type-54 path.
-
-Therefore the existence of the H2OFFT command itself must **not** be interpreted as evidence that running `-edt4f` can safely update the logo on this machine.
-
-For BIOS 1.15 on this P916F-STX, the Type-54 route is treated as:
-
-```text
-REJECTED / NOT IMPLEMENTED FOR THIS BUILD
-```
-
-## Insyde route #2: `-logoupdate` / authenticated Type 0x6D
-
-A second generic Insyde logo-update mechanism follows a different design:
-
-```text
--logoupdate
-  -> type 0x6D
-  -> authenticated/signed image
-  -> PKCS#7 verification
-  -> dedicated target region identified by GUID
-```
-
-The target GUID identified for that generic logo region is:
+The retained analysis describes a different generic route associated with `-logoupdate`: an authenticated image, PKCS#7 verification and a dedicated destination identified by GUID:
 
 ```text
 DACFAB69-F977-4784-8AD8-7724A6F4B440
 ```
 
-For this mechanism to be useful, the machine needs the corresponding firmware-update/target-region plumbing to be provisioned.
+The machine-specific results recorded by the investigation were:
 
-### Windows ESRT result
+| Check | Recorded result | Evidence type / address context |
+|---|---|---|
+| Windows ESRT inspection | No entry for the target GUID | Live exposed-resource observation |
+| Raw-ROM firmware device map | No matching entry among 47 entries | Static provisioning analysis |
+| Raw-ROM FDM location | `ROM+0x1D7C000` | Raw-image file offset |
 
-The researched machine's Windows ESRT was inspected and did **not** expose an entry for:
+The absence of the target in ESRT is not, in isolation, proof that a raw region does not exist. The FDM check supplies the separate static evidence used by the report. Taken together, the examined Type-0x6D path lacks its expected provisioned target in this build.
 
-```text
-DACFAB69-F977-4784-8AD8-7724A6F4B440
-```
+A complete parsed FDM listing and original ESRT capture remain desirable for independently reproducing the negative result. The retained report's 47-entry count must not be relabeled as a newly performed scan. Absence of this target also does not establish absence of every other logo-related type or region.
 
-This is live evidence against the machine exposing that logo component as a firmware-resource update target.
+## Result matrix
 
-### Raw-ROM FDM result
+| Mechanism | Finding on the examined build | Evidence class | Source coverage | Limitation |
+|---|---|---|---|---|
+| Type `0x54`, raw/project-specific logo data | Examined chipset callback returns `EFI_UNSUPPORTED` | Static-confirmed | Retained analysis report; underlying module bytes were not redistributed | Applies to the traced callback path |
+| Type `0x6D`, authenticated logo component (ESRT) | Expected target GUID absent from the recorded ESRT result | Live-confirmed | Retained report of the machine observation; original capture not included | Applies to the exposed-resource check |
+| Type `0x6D`, authenticated logo component (FDM) | Expected target GUID absent among the recorded 47 FDM entries | Static-confirmed | Retained report of raw-image analysis; raw bytes not available for a new scan | Applies to the identified raw-ROM FDM scan |
+| Another OEM-specific mechanism | Not established | Not established | No identified source | Not excluded by the two negative results |
+| Persistent replacement inside firmware structures | Not tested | Not tested | No retained write experiment | Requires separate analysis of container layout and update integrity |
 
-The raw 32 MiB ROM was also scanned at the firmware device map area:
+Locating a GIF within firmware is not evidence of a safe replacement procedure. FFS/FV layout, compression, alignment, authentication and the actual write path are distinct concerns. `finding the GIF` is therefore not equivalent to having a safe logo replacement method.
 
-```text
-HFDM / FDM raw-ROM offset: 0x1D7C000
-entries observed:          47
-```
+## Quiet Boot is a separate control
 
-None of those 47 entries used:
+The recorded Quiet Boot setting is QuestionId `0x1064`, `SystemConfig` offset `0x6E`, VarStore GUID `A04A27F4-DF00-4D42-B552-39511302113D`, with zero Disabled and one Enabled. The baseline runtime read reported `Setup[0x6E]=0x01`.
 
-```text
-DACFAB69-F977-4784-8AD8-7724A6F4B440
-```
+SREP runtime visibility and the appearance of the Boot page were reported separately. Visibility does not prove the result of saving Quiet Boot, eliminate variable-write effects or establish that disabling it suppresses every stage of OEM presentation. No verified custom-logo replacement follows from this setting.
 
-This is machine-specific static evidence that the expected Type-6D logo target region is not provisioned in the current raw flash image.
+The [runtime-visibility report](srep-runtime-reveal.md) distinguishes source presence, page reveal and persistent modification. The [setup inventory](bios-setup-options.md) keeps defaults separate from live values.
 
-### Type-6D conclusion
+## Research boundary
 
-The generic mechanism exists in the broader Insyde ecosystem, but the required target region is absent from the two machine-specific places checked:
+The evidence supports retaining both negative paths and avoiding speculative logo writes. In particular:
 
-```text
-Windows ESRT  -> no DACFAB69... entry
-raw-ROM FDM   -> no DACFAB69... entry among 47 entries
-```
+- H2OFFT help syntax is not evidence of a P916F Type-0x54 writer;
+- the expected Type-0x6D target must not be assumed when the recorded target is absent;
+- a sibling P916F firmware's logo layout is not interchangeable;
+- an embedded GIF does not make direct replacement safe.
 
-The Type-6D route is therefore treated as:
-
-```text
-NOT PROVISIONED ON THE TESTED P916F-STX BIOS 1.15
-```
-
-## Combined conclusion for logo-only update paths
-
-The two obvious generic Insyde routes resolve as follows:
-
-```text
-P916F-STX BIOS 1.15
-
-H2OFFT -edt4f
-  -> IHISI Type 0x54
-  -> raw/project-specific logo writer
-  -> exact P916F callback rejects type 0x54
-  -> NOT IMPLEMENTED
-
-H2OFFT -logoupdate
-  -> Type 0x6D
-  -> authenticated PKCS#7 logo image
-  -> requires DACFAB69-F977-4784-8AD8-7724A6F4B440 target
-  -> absent from Windows ESRT
-  -> absent from 47-entry raw-ROM FDM
-  -> NOT PROVISIONED
-```
-
-Accordingly:
-
-> **No safe, enabled logo-only updater has been established for this BIOS build.**
-
-This is stronger than merely saying "we did not find the right command": both known generic Insyde paths were followed far enough into this machine's own firmware/provisioning to identify concrete blockers.
-
-It still does **not** prove that no third, completely different OEM-specific mechanism could exist. None has been found so far.
-
-## Why the embedded GIF is not treated as a simple replaceable file
-
-The animation is contained inside UEFI firmware structures. Replacing the image persistently would require preserving the relevant firmware-volume/file structure and any associated compression, alignment, integrity data and flash layout.
-
-Therefore:
-
-```text
-finding the GIF != having a safe logo replacement method
-```
-
-A firmware rebuild/reflash path remains fundamentally different from a dedicated logo-only OEM update service.
-
-## Quiet Boot: a separate, safer lever
-
-The investigation also identified the BIOS `Quiet Boot` setting:
-
-```text
-QuestionId:      0x1064
-VarStore:        SystemConfig
-VarStore GUID:   A04A27F4-DF00-4D42-B552-39511302113D
-VarStore offset: 0x6E
-0x00:            Disabled
-0x01:            Enabled
-```
-
-A runtime read on the researched machine observed:
-
-```text
-Setup[0x6E] = 0x01
-```
-
-so Quiet Boot was enabled at that time.
-
-### Stock IFR visibility versus runtime reveal
-
-Static IFR analysis found the relevant Boot settings inside a suppressed block. Separately, the machine was booted with **Smokeless Runtime EFI Patcher (SREP)**; the patcher reported a successful search/patch operation, and a subsequent BIOS photograph showed the Boot page containing options including:
-
-```text
-Quick Boot
-Quiet Boot
-Network Stack
-PXE Boot Capability
-USB Boot
-UEFI OS Fast Boot
-```
-
-This establishes an important distinction:
-
-- the settings are present in the firmware forms;
-- stock presentation may suppress the block;
-- the block can be exposed at runtime without first rebuilding the SPI firmware image.
-
-A candidate permanent SetupUtility suppression-byte modification discussed during static analysis is documented elsewhere, but it was **not** written to the firmware and should not be confused with the successful runtime SREP reveal.
-
-## Safety conclusion
-
-The logo research did **not** justify trying speculative firmware writes.
-
-In particular:
-
-- do not run the generic `-edt4f` command merely because H2OFFT supports the syntax;
-- do not assume `-logoupdate` has a target when the expected region is absent;
-- do not treat a sibling P916F firmware's logo layout as interchangeable;
-- do not infer that finding an embedded GIF makes direct replacement safe.
-
-For changing boot presentation without rewriting firmware regions, a firmware-owned setup option such as Quiet Boot is conceptually much safer than inventing an unsupported logo write path.
+No turnkey H2OFFT invocation, cross-flash recommendation or known-good permanent SetupUtility modification is published here. Exact missing artifacts and captures are listed in [documentation status](documentation-status.md#pending-evidence).

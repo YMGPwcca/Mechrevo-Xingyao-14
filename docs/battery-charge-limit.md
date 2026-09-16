@@ -1,38 +1,22 @@
-# Battery charge limit
+# Battery charge-limit protocol
 
-This is currently the most thoroughly live-validated low-level feature documented for the `P916F-STX`.
+## Scope and validated behavior
 
-## Executive summary
+This page documents the firmware-level battery charge-limit subsystem identified in the `P916F-STX` IT5571 EC and exercised through the live ITE PMC2 host interface. The machine-specific historical findings are retained from `SRC-BASELINE` (stable source crosswalk [S1](research-sources.md#project-sources)); the raw validation record is in [validation](validation.md). The exact EC carve and its address-space limits are listed in the [artifact registry](research-artifacts.md#current-raw-32-mib-rom).
 
-The laptop has a real firmware-level battery charge-limit subsystem implemented in the ITE IT5571 EC.
-
-It is reachable from Linux through the live ITE **PMC2** host interface:
+The recorded live configuration was:
 
 ```text
-DATA            = 0x68
-COMMAND/STATUS  = 0x6C
+state=1
+T1=80%
+T2=100%
 ```
 
-The stock Linux battery driver does not expose generic charge-threshold sysfs attributes for this machine, but the EC's own command protocol is functional.
+With that exact pair, charging stopped near the displayed 79–80% boundary, resumed below that region and retained the configuration across a normal reboot. The recorded reboot result did not require Windows Control Center to keep the state. These results apply to the investigated BIOS/EC baseline, not to arbitrary threshold pairs or other models. The stock battery device in the recorded Linux environment did not expose `charge_control_start_threshold`, `charge_control_end_threshold` or `charge_behaviour`; the firmware command path nevertheless worked.
 
-The one configuration fully validated on live hardware is:
+The firmware range check accepts numeric values from 0 through 100 inclusive. Only the `T1=80%`, `T2=100%` pair has been behaviorally validated. The range check must not be turned into an unqualified claim that every arbitrary pair has known charging semantics.
 
-```text
-state = enabled
-T1    = 80
-T2    = 100
-```
-
-With that exact pair the machine:
-
-- stopped charging around the displayed 79–80% boundary,
-- charged again when the battery had fallen below that boundary,
-- retained `state=1, T1=80, T2=100` across a normal reboot,
-- did not require the Windows Control Center to keep the state after reboot.
-
-The firmware setter accepts numeric values from 0 through 100, but only the `80/100` pair has been behaviorally validated. Do **not** turn that into an unqualified claim that every arbitrary `T1/T2` pair has known semantics.
-
-## Linux power-supply devices
+## Linux power-supply devices and units
 
 The battery appears as:
 
@@ -52,17 +36,7 @@ The retained battery model string is:
 588974-3S-G-A0
 ```
 
-Useful live attributes include:
-
-```text
-capacity
-status
-voltage_now
-power_now
-energy_now
-```
-
-`current_now` was not present in the observed `LCBT` sysfs tree.
+Useful live attributes include `capacity`, `status`, `voltage_now`, `power_now` and `energy_now`. In the observed `LCBT` sysfs tree, `current_now` was not present. In the recorded output, `capacity` is a percent; `voltage_now` is in µV; `power_now` is in µW; and `energy_now` is in µWh. Blank output is not interpreted as zero.
 
 A representative capped state with AC connected was:
 
@@ -74,18 +48,18 @@ energy_now: 63154000
 ACAD:       online=1
 ```
 
-## EC-side state discovered statically
+## EC-side state and firmware landmarks
 
 Static reverse engineering of the exact P916F IT5571 firmware identified:
 
 | EC XRAM | Role | Evidence |
 |---|---|---|
-| `0x0D01` bit 4 | enable/state bit | Static-confirmed; state also observed through host GET |
-| `0x0D13` | threshold value #1 | Static-confirmed + live set/readback |
-| `0x0D14` | threshold value #2 | Static-confirmed + live set/readback |
-| `0x0394` | SOC/battery percentage used by the control logic | Static-confirmed + host-MMIO corroboration |
+| `XRAM[0x0D01].bit4` | Enable/state bit | Static-confirmed; state also observed through host GET |
+| `XRAM[0x0D13]` | Threshold value 1 | Static-confirmed plus live setter/getter readback |
+| `XRAM[0x0D14]` | Threshold value 2 | Static-confirmed plus live setter/getter readback |
+| `XRAM[0x0394]` | SOC/battery percentage used by control logic | Static-confirmed plus host-MMIO corroboration |
 
-Important routines in the carved EC image:
+These are EC XRAM addresses, not host physical addresses. Important locations in the carved EC image are:
 
 ```text
 CODE:0xED60...   enable/status handler family
@@ -97,11 +71,13 @@ CODE:0xF508      disable/reset path
 CODE:0xF526      reads XRAM[0x0D13]
 CODE:0xF621      reads XRAM[0x0D14]
 CODE:0xC063      SOC/threshold decision logic
+CODE:0xF4D8      recorded PMC2 parser landmark
+CODE:0xE65D      recorded PMC2 data-out helper landmark
 ```
 
-The host command dispatcher that reaches this family was traced around the later `0xF4xx` region; a PMC2 command parser was identified around `CODE:0xF4D8`.
+The EC is banked. A `CODE:` address identifies a logical code location and does not automatically identify a byte offset in either firmware container; the complete bank-selection model was not retained. The [embedded-controller page](embedded-controller.md#ec-firmware-image-and-address-spaces) documents the preferred raw-ROM carve and related address spaces.
 
-## Numeric range validation: 0..100 inclusive
+## Inclusive numeric range
 
 Both threshold setters contain the same 8051 range-check pattern. In simplified form:
 
@@ -114,50 +90,44 @@ JC   invalid
 MOV  A,value
 SETB C
 SUBB A,#0x64
-JNC  invalid
+JNC invalid
 ```
 
-The second compare intentionally sets carry before `SUBB`. On 8051:
+The second compare intentionally sets carry before `SUBB`. On the 8051:
 
 ```text
 SUBB A,src  =>  A = A - src - C
 ```
 
-For `A=100`, the operation is effectively `100 - 100 - 1`, which borrows; `JNC invalid` is therefore **not** taken and 100 remains valid.
+For `A=100`, the operation is effectively `100 - 100 - 1`, which borrows; `JNC invalid` is therefore not taken and 100 remains valid. For `A=101`, the result does not borrow and the invalid branch is taken. The accepted encoded range is consequently 0 through 100 inclusive (`0x00` through `0x64` as a numeric byte).
 
-For `A=101`, the result does not borrow; `JNC invalid` is taken.
+This strongly establishes percentage-like fields. It does not define the user-facing meaning of every possible `T1`/`T2` pair.
 
-Therefore the accepted numeric range is:
+## PMC2 host protocol
 
-```text
-0 <= value <= 100
-```
+The exact command family exercised on live hardware is carried by the ITE PMC2 logical device:
 
-This strongly establishes percentage-like fields. It does not fully define the user-facing meaning of every possible pair.
+| Operation | Command byte written to I/O `0x6C` | Argument/data byte written to I/O `0x68` | Recorded meaning | Validation |
+|---|---:|---:|---|---|
+| Disable/reset | `0xF1` | `0x10` | Clears enable state and both threshold fields in the static path | Static-confirmed only; not live-tested |
+| Enable | `0xF1` | `0x11` | Enables the programmed subsystem | Live-confirmed |
+| Read state | `0xF1` | `0x12` | Returns the enable state | Live-confirmed |
+| Read T1 | `0xF1` | `0x13` | Returns threshold field 1 / `XRAM[0x0D13]` | Live-confirmed |
+| Read T2 | `0xF1` | `0x14` | Returns threshold field 2 / `XRAM[0x0D14]` | Live-confirmed |
+| Set T1 to 80% | `0xF2` | `0x50` | `0x50` is 80 decimal | Live-confirmed at 80% |
+| Set T2 to 100% | `0xF3` | `0x64` | `0x64` is 100 decimal | Live-confirmed at 100% |
 
-## Host protocol
-
-The exact command family exercised on live hardware is:
-
-| Command byte | Following data byte | Observed/static meaning | Validation |
-|---|---:|---|---|
-| `F1` | `10` | disable/reset subsystem; static path clears enable bit and both thresholds | Static-confirmed only |
-| `F1` | `11` | enable subsystem | Live-confirmed |
-| `F1` | `12` | GET enabled state | Live-confirmed |
-| `F1` | `13` | GET threshold #1 / `0x0D13` | Live-confirmed |
-| `F1` | `14` | GET threshold #2 / `0x0D14` | Live-confirmed |
-| `F2` | `NN` | SET threshold #1 to `NN` | Live-confirmed at 80 |
-| `F3` | `NN` | SET threshold #2 to `NN` | Live-confirmed at 100 |
+The historical validation log labels the last two transactions `F2 80` and `F3 100`; those labels are preserved verbatim in the raw blocks below. Outside raw evidence, the wire pairs are `0xF2` with data `0x50` and `0xF3` with data `0x64`. The encoded byte is not ASCII text or packed decimal.
 
 The successful host transaction sequence was:
 
-1. wait until PMC2 `IBF` (status bit 1) is clear;
-2. write the command byte (`F1`, `F2` or `F3`) to `0x6C`;
-3. wait for `IBF` to clear again;
-4. write the command's argument/subcommand byte to `0x68`;
-5. for a returning command, wait for `OBF` (status bit 0) and read the response from `0x68`.
+1. Wait until PMC2 `IBF` (status bit 1) is clear.
+2. Write the command byte (`0xF1`, `0xF2` or `0xF3`) to command/status I/O `0x6C`.
+3. Wait for `IBF` to clear again.
+4. Write the command's argument or subcommand byte to data I/O `0x68`.
+5. For a returning command, wait for `OBF` (status bit 0) and read the response from data I/O `0x68`.
 
-The EC data-out helper used by the relevant firmware path writes its response to the PMC2 data-out register; one identified helper sits around `CODE:0xE65D`.
+The threshold setters returned accepted values of 80 and 100 in the recorded experiment, and the state and threshold getters returned coherent one-byte values. The complete reply/error contract for enable, reset, invalid arguments and timeouts was not retained; operations are not assumed to have identical response lengths. Timing bounds, stale-output handling, transaction ownership and concurrent access by other platform software are not established. This is a recovered protocol description, not a complete production transport implementation.
 
 ## Validation chronology
 
@@ -171,13 +141,11 @@ F1 13 threshold #1 : 0x00 (0%)
 F1 14 threshold #2 : 0x00 (0%)
 ```
 
-This was important because it proved the protocol could return coherent zero/default state before any setters were exercised.
+This established coherent zero/default state before any setter was exercised.
 
 ### 2. Setter/readback while still disabled
 
-The subsystem was deliberately left disabled while writing the thresholds.
-
-Live output:
+The subsystem was deliberately left disabled while writing the thresholds. The recorded output was:
 
 ```text
 Before: enabled=0
@@ -188,18 +156,17 @@ After: enabled  = 0
 0D14            = 100%
 ```
 
-This proved several things at once:
+This established that:
 
-- `F2` reaches threshold #1;
-- `F3` reaches threshold #2;
-- the values read back through `F1 13/14` exactly match what was written;
-- writing the thresholds does not implicitly enable the subsystem.
-
-The returned `80` and `100` also show that these SET transactions produced response bytes corresponding to the accepted values in this test.
+- `0xF2` reaches threshold field `XRAM[0x0D13]`;
+- `0xF3` reaches threshold field `XRAM[0x0D14]`;
+- the values read back through `0xF1 0x13` and `0xF1 0x14` match what was written;
+- writing thresholds does not implicitly enable the subsystem;
+- the SET transactions returned response bytes corresponding to the accepted values in this test.
 
 ### 3. Enable test
 
-After the thresholds had been verified, only then was the enable command sent.
+Only after the thresholds had been verified was the enable command sent:
 
 ```text
 Before enable: state=0, T1=80%, T2=100%
@@ -207,13 +174,11 @@ Sending F1 11 (ENABLE)...
 After enable : state=1, T1=80%, T2=100%
 ```
 
-This is live confirmation that `F1 11` changes the enabled state without destroying the programmed threshold values.
+This is live confirmation that `0xF1 0x11` changes the enabled state without destroying the programmed threshold values.
 
 ### 4. Stop-charging behavior above the configured boundary
 
-At the beginning of the test the battery was around 89%. The first roughly ten seconds were with the adapter physically disconnected, so those initial `Discharging` samples are not evidence about the cap.
-
-After AC was connected, the observed transition included:
+At the beginning of the test the battery was around 89%. The first roughly ten seconds were captured with the adapter physically disconnected, so those initial `Discharging` samples are not evidence about the cap. After AC was connected, the observed transition included:
 
 ```text
 16s  status=Charging      cap=89%  power_now=2263000
@@ -225,7 +190,7 @@ After AC was connected, the observed transition included:
 28s  status=Not charging  cap=89%  power_now=0
 ```
 
-The short transition states are expected while the EC/charger changes operating state. The important observation is that the machine repeatedly settled at:
+The short transition states occurred while the EC/charger changed operating state. The important repeated settled observation was:
 
 ```text
 AC connected
@@ -234,13 +199,11 @@ status = Not charging
 power_now = 0
 ```
 
-That is direct behavioral evidence that the enabled firmware feature prevented continued charging above the configured 80 value.
+This is direct behavioral evidence that the enabled firmware feature prevented continued charging above the configured 80 value in the tested configuration.
 
 ### 5. Boundary behavior while discharging and recharging
 
-The battery was intentionally discharged below the boundary and then observed with AC connected.
-
-The user observed that:
+The battery was intentionally discharged below the boundary and then observed with AC connected:
 
 ```text
 77–78% displayed: still charging
@@ -253,9 +216,7 @@ A representative capped sample was:
 79% - Not charging
 ```
 
-This proves a practical transition around the configured value, within the coarse integer resolution of Linux's `capacity` property.
-
-It does **not** yet prove the exact internal hysteresis width. Linux reports integer percent, while the EC may compare a differently rounded or higher-resolution SOC value internally. Accordingly this repository no longer labels the 77/78/79 observation as a precisely measured hysteresis band.
+This establishes a practical transition around the configured value within the coarse integer resolution of Linux `capacity`. It does not establish an exact internal hysteresis width, fractional SOC threshold or rounding rule. The EC may compare a differently rounded or higher-resolution SOC value.
 
 ### 6. Persistence across normal reboot
 
@@ -267,25 +228,17 @@ T1    = 80
 T2    = 100
 ```
 
-Therefore the configuration survives a normal reboot.
+The configuration therefore survived a normal reboot. Persistence across a true EC power loss/reset, battery disconnect or removal of the battery-controller power domain remains unestablished.
 
-What remains unknown is whether it survives a **true EC power loss/reset**, such as whatever hardware condition actually clears EC retained state or disconnects the battery/controller power domain.
-
-## What can be said about T1 and T2
+## Threshold semantics
 
 ### T1
 
-Static code around `CODE:0xC063` compares live SOC at `0x0394` against `0x0D13` before entering different charger-control branches.
-
-Live behavior with `T1=80` then stopped charging around 80.
-
-Therefore T1 is strongly established as a threshold that directly controls the practical cap behavior in the tested configuration.
+Static code around `CODE:0xC063` compares the live SOC byte at `XRAM[0x0394]` against `XRAM[0x0D13]` before entering different charger-control branches. In the tested configuration, `T1=80%` correlated with charging stopping around 80%. T1 is therefore strongly established as a threshold that directly controls the practical cap behavior in that configuration.
 
 ### T2
 
-`0x0D14` is definitely a second validated 0..100 threshold consumed by the same control routine. It participates in additional ordering/guard comparisons after the `0x0D13` check.
-
-Its exact end-user meaning has **not** yet been fully mapped.
+`XRAM[0x0D14]` is a second range-checked 0–100 threshold consumed by the same control routine. It participates in additional ordering/guard comparisons after the `XRAM[0x0D13]` check, but its exact end-user meaning has not been fully mapped.
 
 The test used:
 
@@ -294,37 +247,31 @@ T1 = 80
 T2 = 100
 ```
 
-because 100 was a conservative high value for the second field while isolating the behavior associated with the 80 setting.
-
-It is therefore too strong to document a generic rule such as:
+100 was a conservative high value for the second field while isolating the behavior associated with the 80 setting. The evidence does not justify a generic rule such as:
 
 ```text
 T1 = any desired cap
 T2 = 100
 ```
 
-as proven behavior. What is proven is only that **80/100 works as an approximately 80% cap on this machine**.
+What is proven is only that `T1=80%`, `T2=100%` works as an approximately 80% cap on this machine. T2 is not identified here as a recharge threshold or as a precisely measured hysteresis boundary.
 
-## Charger-control internals related to the thresholds
+## Charger-control working values
 
 The decision logic derives working words around:
 
-```text
-0x0D65/0x0D66
-0x0D67/0x0D68
-```
+XRAM[0x0D65]/XRAM[0x0D66]
+XRAM[0x0D67]/XRAM[0x0D68]
 
 from source/default words around:
 
 ```text
-0x0D54..0x0D57
+XRAM[0x0D54..0x0D57]
 ```
 
-Helpers around `CODE:0xC249` and `CODE:0xC27A` clear or copy these words depending on the selected charge-control branch.
+Helpers around `CODE:0xC249` and `CODE:0xC27A` clear or copy these words depending on the selected charge-control branch. A later firmware worker stages transactions with command numbers `0x14` and `0x15`. Those numbers are consistent with standard Smart Battery charger `ChargingCurrent` and `ChargingVoltage` conventions, but that semantic naming remains an inference until the complete bus transaction path is independently decoded.
 
-A later firmware worker stages transactions with command numbers `0x14` and `0x15`. Those numbers are consistent with standard smart-charger `ChargingCurrent` and `ChargingVoltage` commands, but that semantic naming remains an **inference** until the complete bus transaction path is independently decoded.
-
-## AC-power / battery-power observation at the cap
+## AC and battery power observations
 
 With AC connected and the battery capped, one stable snapshot was:
 
@@ -336,11 +283,9 @@ energy_now: 63154000
 ACAD:       online=1
 ```
 
-This shows that the battery was neither being reported as charging nor reporting battery power flow at that instant.
+This shows that the battery was neither reported as charging nor reporting battery power flow at that instant. Battery sysfs does not directly measure wall-side adapter draw, so the snapshot does not prove that the adapter supplied every instantaneous system watt.
 
-It is tempting to say this alone proves the whole laptop was powered directly from the adapter, but battery sysfs does not directly measure wall-side adapter draw. The stronger test was to watch stored battery energy under load.
-
-During a five-minute `stress-ng --cpu 0` run:
+During a recorded five-minute `stress-ng --cpu 0` run:
 
 ```text
 start:
@@ -350,61 +295,39 @@ end:
 78%  Charging      power=28128000  energy=62661000
 ```
 
-The energy change was:
+The retained energy values were:
 
 ```text
 63.154 Wh -> 62.661 Wh
 Delta     = 0.493 Wh
 ```
 
-across roughly five minutes.
+The same values are `63154000 µWh` and `62661000 µWh`; their difference is `493000 µWh = 0.493 Wh`. The two timestamped snapshots in the detailed validation record are 313 seconds apart, whereas the stress tool reports a 300-second (five-minute) run. Those durations are not interchangeable for a precise average-power calculation.
 
-This demonstrates that the battery did contribute energy during that high-load interval before charging resumed below the cap. The most plausible interpretation is a platform **hybrid/battery-assist** behavior under sufficient load, followed by recharge toward the cap.
+The battery therefore contributed net stored energy during that high-load interval before charging resumed below the cap. Battery-assist or hybrid-power operation is a plausible interpretation under load, but the test did not measure adapter input power, resolve instantaneous current paths or establish the complete charger/power-path topology.
 
-That interpretation is useful, but it is not a complete electrical characterization of the charger/power-path topology.
+## Paths tested and rejected
 
-## Paths that were tested and rejected
+| Alternative | Recorded result and boundary |
+|---|---|
+| Generic Linux threshold sysfs | `charge_control_start_threshold`, `charge_control_end_threshold` and `charge_behaviour` were absent from the observed battery device |
+| Huawei-compatible WMI threshold API | Read-only GET `0x1103` returned failure/unsupported; corresponding SET `0x1003` was not attempted |
+| Generic Uniwill/Tongfang offsets | `0x07B9` and `0x07D0` are comparative software constants, not established P916F control addresses |
+| `INOU0000` / `ECRR` / `ECRW` | Not found in the examined ACPI tables |
+| Dedicated I2EC base `0x380` | Rejected by the recorded `0xFF` candidate-read / valid-MMIO cross-check; see [embedded-controller](embedded-controller.md#rejected-dedicated-i2ec-candidate) |
+| ACPI `_BTP` | Battery trip-point notification, not the charge-cap subsystem |
 
-### Generic Linux threshold sysfs
-
-The battery did not expose:
-
-```text
-charge_control_start_threshold
-charge_control_end_threshold
-charge_behaviour
-```
-
-### Huawei-compatible WMI threshold API
-
-A Huawei-style threshold GET using method ID `0x1103` returned failure/unsupported.
-
-The corresponding SET method `0x1003` was deliberately **not** tested after GET failed.
-
-### Generic Uniwill/Tongfang charge-limit offsets
-
-Windows OEM software contained generic constants:
-
-```text
-0x07B9
-0x07D0
-```
-
-The P916F's exact firmware does not require those offsets for the working host protocol. They are comparative evidence only and should not be written directly on this machine.
-
-### Dedicated I2EC at `0x380`
-
-A read-only cross-check returned `0xFF` for all candidate I2EC reads while host MMIO returned a real battery value. That path is rejected; see [`embedded-controller.md`](embedded-controller.md).
+No arbitrary EC writes or cross-model offsets are required by the documented result.
 
 ## Disable/reset path
 
-Static analysis maps:
+Static analysis maps the following pair to the reset/disable handler around `CODE:0xF508`:
 
 ```text
 F1 10
 ```
 
-to the reset/disable handler around `CODE:0xF508`, which clears:
+Outside that raw historical label, the command is `0xF1` with data `0x10` written through the PMC2 command/status and data ports described above. The handler statically clears:
 
 ```text
 XRAM[0x0D01].bit4
@@ -412,9 +335,9 @@ XRAM[0x0D13]
 XRAM[0x0D14]
 ```
 
-This rollback command has **not** been exercised live in the documented validation sequence, because the known-good 80/100 state was intentionally left enabled.
+This path is **static-confirmed only**. It was not exercised live in the documented validation sequence because the known-good `80%/100%` state was intentionally left enabled. It must not be described as a tested rollback or as a verified restoration of every factory charging parameter.
 
-## Current known-good state
+## Current known-good state and remaining questions
 
 At the end of the experiment and again after reboot:
 
@@ -424,4 +347,4 @@ T1    = 80
 T2    = 100
 ```
 
-That exact state is the strongest known-good reference point for future work on this machine.
+This exact state is the only threshold pair behaviorally validated in the retained record and is the strongest known-good reference point for future work. Remaining technical questions are tracked in [open technical questions](open-questions.md#battery-charge-limit), including T2 semantics, internal SOC resolution and reset persistence. No manual EC writer or production transport recipe is published here.

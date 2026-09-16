@@ -1,21 +1,19 @@
 # Live validation report
 
-This document preserves the live tests used to establish the P916F-STX EC transport and battery charge-limit behavior. It includes raw observations where they materially support a conclusion.
+This report preserves the recorded P916F-STX EC and battery experiments from `SRC-BASELINE` (stable source crosswalk [S1](research-sources.md#project-sources)). No hardware tests were rerun during documentation consolidation. Capture dates, the complete original probe programs and some environment versions were not retained; this limits end-to-end reproduction, not the identity of the quoted observations. The report is the behavioral counterpart to the static analysis in [embedded-controller.md](embedded-controller.md) and [battery-charge-limit.md](battery-charge-limit.md).
 
-The purpose is reproducibility: the static firmware analysis in [`embedded-controller.md`](embedded-controller.md) and [`battery-charge-limit.md`](battery-charge-limit.md) can be checked against the actual machine behavior recorded here.
+Historical output is preserved verbatim. In labels such as `F2 80` and `F3 100`, the threshold arguments are decimal: the specified wire pairs are `0xF2 0x50` and `0xF3 0x64`. Other `F1` subcommand labels use hexadecimal notation in the protocol specification; raw labels below remain unchanged. Units in battery output are `capacity` in percent, `voltage_now` in µV, `power_now` in µW and `energy_now` in µWh. Blank output is not interpreted as zero.
 
 ## 1. Live ITE Super-I/O identity
 
-ITE configuration space was checked at the common candidate ports.
-
-Observed result:
+Observed configuration-space result:
 
 ```text
 CFG 0x2E: chip=0xFFFF rev=0xFF
 CFG 0x4E: chip=0x5571 rev=0x07
 ```
 
-The valid interface is therefore `0x4E`.
+The valid identity response was obtained at I/O `0x4E`.
 
 ### PMC2 logical device
 
@@ -29,20 +27,18 @@ I/O #2      = 0x0000
 IRQ         = 0x00
 ```
 
-This establishes the live host transport:
+The transport identified by that configuration was:
 
 ```text
 PMC2 DATA            = 0x68
 PMC2 COMMAND/STATUS  = 0x6C
 ```
 
-This result was obtained independently of the EC disassembly and then matched the firmware command path.
+The discovery was performed independently of the EC disassembly and subsequently correlated with the working command path.
 
 ## 2. Rejected candidate I2EC path
 
-Before PMC2 was identified, static initialization code suggested a possible dedicated I2EC interface. A candidate base around `0x380` was tested **read-only**.
-
-Observed output:
+A candidate dedicated I2EC interface at base `0x380` was evaluated by querying state rather than writing the threshold fields. Address selection still required port transactions.
 
 ```text
 I2EC control : EC[200D] = 0xFF
@@ -53,19 +49,19 @@ MMIO crosschk : FEEC2394 = 92
 Cross-check   : MISMATCH
 ```
 
-The same battery SOC field that returned `0xFF` through the candidate I2EC route simultaneously returned a plausible value through the known H2RAM/MMIO mapping:
+The known shared-memory SOC address returned:
 
 ```text
 0xFEEC2394 = 92
 ```
 
-Conclusion:
+The experiment's conclusion was:
 
 ```text
 candidate dedicated I2EC base 0x380 -> rejected
 ```
 
-The path did not return real EC XRAM on the stock machine.
+The candidate interface did not return correlated EC state in the tested configuration.
 
 ## 3. PMC transaction behavior
 
@@ -76,20 +72,13 @@ status bit0 = OBF
 status bit1 = IBF
 ```
 
-Working sequence:
+The host waited for `IBF=0`, wrote the command byte to command/status I/O `0x6C`, waited again, and wrote the subcommand/data byte to data I/O `0x68`. When a response was expected, it waited for `OBF=1` and read `0x68`.
 
-1. wait for `IBF=0`;
-2. write command byte to `0x6C`;
-3. wait for `IBF=0`;
-4. write subcommand/data byte to `0x68`;
-5. if a response is expected, wait for `OBF=1`;
-6. read response byte from `0x68`.
-
-No brute-force command scanning was used. Commands were derived from the EC firmware first and exercised afterward.
+Commands were derived from static firmware analysis before the experiment. No brute-force command scan is part of this validation record. The trace does not establish bounded timeout values or concurrent-access safety.
 
 ## 4. Initial charge-limit state
 
-Before any setter was exercised, the read commands returned:
+Before any setter was exercised:
 
 ```text
 F1 12 enabled/state : 0x00 (0)
@@ -97,7 +86,7 @@ F1 13 threshold #1 : 0x00 (0%)
 F1 14 threshold #2 : 0x00 (0%)
 ```
 
-Baseline:
+Baseline state:
 
 ```text
 state = 0
@@ -105,20 +94,18 @@ T1    = 0
 T2    = 0
 ```
 
-This is important because the protocol produced coherent default state before any mutation.
+The getter sequence returned coherent disabled/default values before mutation.
 
 ## 5. Threshold write/readback while disabled
 
-The subsystem was intentionally kept disabled while testing the two setters.
-
-Transactions:
+The recorded transaction labels were:
 
 ```text
 F2 80
 F3 100
 ```
 
-Observed output:
+These labels mean T1=80 decimal and T2=100 decimal; their wire data bytes are `0x50` and `0x64` respectively.
 
 ```text
 Before: enabled=0
@@ -129,23 +116,17 @@ After: enabled  = 0
 0D14            = 100%
 ```
 
-Conclusions:
-
-- `F2` writes threshold field `0x0D13`;
-- `F3` writes threshold field `0x0D14`;
-- accepted values are returned in the observed SET response;
-- the GET path reads the same values back;
-- threshold writes do not implicitly enable the subsystem.
+The setters returned accepted values, getters read those values back, and the queried enable state remained zero. This separates threshold storage from subsystem activation.
 
 ## 6. Enable transition
 
-After confirming the two threshold values, the enable command was issued:
+Recorded operation:
 
 ```text
 F1 11
 ```
 
-Observed state:
+Observed state transition:
 
 ```text
 Before enable: state=0, T1=80%, T2=100%
@@ -153,15 +134,11 @@ Sending F1 11 (ENABLE)...
 After enable : state=1, T1=80%, T2=100%
 ```
 
-This validates `F1 11` as the enable operation and shows that enabling preserves the previously programmed thresholds.
+The specified operation is `0xF1 0x11`. The readback confirms activation while preserving the programmed threshold values; it does not specify the complete enable-command response framing.
 
 ## 7. Charge-stop behavior above the configured region
 
-The battery was approximately 89% when AC was connected.
-
-The first part of the trace was captured before the adapter was physically connected; the adapter was connected during the sequence.
-
-Observed trace:
+The battery was approximately 89%. The adapter was physically disconnected for the first part of the trace and connected during the sequence. Initial Discharging samples therefore do not test AC-connected limiting.
 
 ```text
 00s  status=Discharging  cap= 89% power_now=3906000 voltage_now=13003000
@@ -181,7 +158,7 @@ Observed trace:
 28s  status=Not charging cap= 89% power_now=0       voltage_now=13054000
 ```
 
-The significant steady-state observation is:
+The repeated settled observation was:
 
 ```text
 SOC well above 80%
@@ -190,13 +167,11 @@ status = Not charging
 power_now = 0
 ```
 
-The intermediate `Charging` / low-power `Discharging` samples show transition behavior while the EC/charger changed state; they do not invalidate the later stable capped condition.
+The trace contains intermediate Charging and Discharging samples. It establishes repeated inhibition after adapter connection, not an uninterrupted steady state throughout the entire interval.
 
 ## 8. Boundary behavior below the cap
 
-The battery was then intentionally discharged below the configured region and observed while AC was connected.
-
-Observed behavior:
+After discharging below the configured region, the recorded observation with AC connected was:
 
 ```text
 displayed 77–78% -> charging continued
@@ -209,11 +184,9 @@ Representative capped sample:
 79% - Not charging
 ```
 
-Linux `capacity` is integer-valued. Therefore this establishes a practical transition near the configured 80 value but does **not** establish an exact internal hysteresis width, fractional SOC threshold or rounding rule.
+This is an observed boundary description rather than a complete sampled charging curve. Integer-valued Linux `capacity` does not resolve an exact fractional SOC threshold, hysteresis width or rounding rule.
 
 ## 9. AC-online capped snapshot
-
-A stable snapshot at the boundary was:
 
 ```text
 === BATTERY ===
@@ -228,7 +201,7 @@ voltage:    12764000
 ACAD: online=1
 ```
 
-This establishes that, at that instant:
+The snapshot establishes:
 
 ```text
 AC adapter present
@@ -236,11 +209,11 @@ battery not charging
 reported battery power = 0
 ```
 
-The snapshot alone does not measure wall-side adapter power, so it is not treated as a complete power-path characterization.
+The empty `charge_now:` line is preserved as empty output. The snapshot does not measure wall-side adapter power or every instantaneous battery current.
 
 ## 10. Reboot persistence
 
-After a normal reboot, without re-applying thresholds or enable, the same GET sequence returned:
+After a normal reboot without reapplying the configuration:
 
 ```text
 state = 1
@@ -248,17 +221,17 @@ T1    = 80
 T2    = 100
 ```
 
-Conclusion:
+Recorded conclusion:
 
 ```text
 configuration persists across a normal reboot
 ```
 
-This does not establish persistence across a complete EC power loss, battery disconnect or other condition that removes the EC's retained power/state.
+The result does not establish persistence through complete EC power loss, battery disconnection, firmware update or another reset class.
 
 ## 11. High-load battery-energy test
 
-A five-minute all-CPU load was used to determine whether the battery remained electrically idle under a heavier system load while AC was connected.
+The experiment applied approximately five minutes of all-CPU load while AC was connected.
 
 ### Before load
 
@@ -284,33 +257,31 @@ stress-ng: info:  [21163] successful run completed in 5 mins
 20:52:27  cap=78%  status=Charging  power=28128000  energy=62661000
 ```
 
-Stored battery energy changed from:
+The reported energy values were:
 
 ```text
 63.154 Wh
 ```
 
-to:
+and:
 
 ```text
 62.661 Wh
 ```
 
-Delta:
+The decrease was:
 
 ```text
 0.493 Wh
 ```
 
-over roughly five minutes.
+Calculation: `(63154000 - 62661000) µWh = 493000 µWh = 0.493 Wh`. The two timestamped snapshots span 313 seconds; the stress tool reports a 300-second (five-minute) run. These durations are not interchangeable for a precise average-power calculation.
 
-The battery therefore supplied net stored energy during the load interval before charging resumed below the threshold region.
-
-The measured result supports a battery-assist / hybrid-power interpretation under load, but it does not by itself identify the exact charger topology, adapter limit or control policy.
+Reported stored energy decreased over the interval and charging was reported at the later sample. This supports net battery-energy contribution and is consistent with battery-assist operation. Adapter rating, instantaneous adapter draw, a continuous current trace and the complete power-path topology were not established by this test.
 
 ## 12. Current validated configuration
 
-The known-good state retained by the documented machine is:
+The retained known-good state was:
 
 ```text
 state = 1
@@ -318,11 +289,11 @@ T1    = 80
 T2    = 100
 ```
 
-This is the only threshold pair currently validated behaviorally.
+This is the only threshold pair behaviorally validated in this report.
 
 ## 13. Validation boundaries
 
-The following statements are **not** established by the tests above:
+The following statements were not established:
 
 ```text
 T1=N, T2=100 always creates an N% cap
@@ -332,4 +303,4 @@ configuration survives complete EC power loss
 power_now=0 proves the adapter supplies every instantaneous system watt
 ```
 
-Those remain open technical questions even though the `80/100` configuration itself is validated.
+The disable/reset path was not exercised. Thermal AML findings, including `THMM` ordering and the `_Q40`/`_Q81`/`_QA0`/`_QA1` query paths, are static source evidence documented separately in [thermal/performance interfaces](thermal-performance.md); they do not count as additional battery experiments. Package hashing and other source-recovery work likewise do not change this validation record.

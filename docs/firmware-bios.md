@@ -1,10 +1,8 @@
-# BIOS / firmware notes
+# BIOS and firmware structure
 
-## Version history observed on the researched machine
+## Research baseline
 
-The machine was previously running BIOS **1.09** and was later updated to BIOS **1.15**.
-
-After the update, the firmware UI reported:
+The investigated machine was reported to have moved from BIOS 1.09 to BIOS 1.15. The retained firmware display values were:
 
 ```text
 BIOS Version: 1.15
@@ -12,238 +10,132 @@ EC Version:   1.15
 Build Date:   05/07/2026
 ```
 
-The build-date string is recorded exactly as shown. It is likely `MM/DD/YYYY` in the usual Insyde/SMBIOS convention, but the repository keeps the raw value to avoid turning a formatting assumption into a fact.
+The build-date string is preserved without assuming a date convention. Internal EC strings use separate build namespaces; the reported `EC Version: 1.15` and any internal EC build label are not silently merged. The reported update changed the boot graphics and introduced an animation. This is a baseline observation, not a complete vendor release history. Sources: [S1 and S9](research-sources.md#project-sources).
 
-The update visibly changed the boot branding: the BGRT/logo changed and a pre-boot animation appeared.
+## BIOS package structure
 
-## BIOS 1.15 package
-
-The outer vendor archive was:
+The baseline report identifies the outer archive as `STX_SKU2_1.15.zip`, containing `STX_SKU2_1.15.exe`. The outer ZIP was not available for rehashing. The uploaded EXE was independently inspected as a 7-Zip self-extracting archive, with the embedded 7-Zip signature at EXE file offset `0x3946F`.
 
 ```text
-STX_SKU2_1.15.zip
+STX_SKU2_1.15.zip                 reported outer archive
+  STX_SKU2_1.15.exe              independently inspected SFX
+    isflash.bin
+    H2OFFT-Wx64.exe
+    platform.ini
+    H2OFFT64.sys
+    BiosImageProcx64.dll
+    InterToolx64.efi
+    H2OFFT.inf
+    FlsHook.exe
+    supporting runtime libraries
 ```
 
-It contained **one updater executable**:
+`isflash.bin` is 35,626,768 bytes. It is not the same artifact as the 33,554,432-byte raw ROM. Offsets in these two representations are not interchangeable.
 
-```text
-STX_SKU2_1.15.exe
-```
+The inspected 1.15 updater has SHA-256 `11718b7f48a13ca08f627c1c3103cf4d1a3ee6857e15bcb165210c11e0ec446a`; the nested image has SHA-256 `4dd5ebb5fb5f23b0de8df0cbd60d6453cfe1f5a22f69ef34ceb24432d80094c1`. Complete file identities are recorded in the [artifact registry](research-artifacts.md). These are offline artifact measurements, not evidence that the updater was executed.
 
-That EXE was a 7-Zip SFX. Extracting the EXE—not merely the outer ZIP—produced the Insyde H2O payload, including:
+### Completion configuration
 
-```text
-isflash.bin              35,626,768 bytes
-H2OFFT-Wx64.exe
-platform.ini
-BiosImageProcx64.dll
-H2OFFT64.sys
-...
-```
+The inspected configuration contains the following values, with the OEM inline comment omitted from this excerpt:
 
-This nesting matters for provenance: `isflash.bin` was **not directly stored in the outer ZIP**.
-
-The extracted updater configuration contains:
-
-```text
+```ini
 [FlashComplete]
 Action=1,1
+Dialog=0
+Counter=15
+ActionOverride=0
 ```
 
-which corresponds to a shutdown action after a successful flash.
+The adjacent configuration comments define action value one as Shutdown and two as Reboot. This is configuration evidence; no updater was executed during consolidation.
 
-## Current raw ROM image
+## H2OFFT identity and embedded help
 
-A raw 32 MiB image of the current machine was dumped and used for later EC/firmware analysis:
+The 1.15 package's `H2OFFT-Wx64.exe` has SHA-256 `86f336d74c2ab951d04f35143c5efaabce94a4ebe9dd87fd62b018ad7103adb0` and size 3,004,280 bytes. Its PE string resources report `FileVersion=6.73` and `ProductVersion=6.73`; its fixed numeric file-version tuple is `6.7.3.0`. These representations are recorded separately.
+
+The executable's retained help strings include:
 
 ```text
-filename: P916F-STX-current-ROM.bin
-size:     0x2000000 bytes / 32 MiB
+-g                Read current ROM and save to file.
+-iv               Show utility and onboard BIOS supported IHISI
+                   version.
+-pq               Query BIOS protection region MAP in current ROM.
+```
+
+Static presence of these options does not prove successful execution against a particular firmware. Exact live IHISI versions, a complete `-pq` region map and a fully retained acquisition transcript remain pending source recovery. A PE version resource is not evidence of the previously proposed build date. See the consolidated gates in [documentation status](documentation-status.md#pending-evidence).
+
+## Raw-ROM reference
+
+The baseline investigation recorded:
+
+```text
+Artifact: P916F-STX-current-ROM.bin
+Size:     0x2000000 bytes / 33,554,432 bytes / 32 MiB
 SHA-256:  77043505b6f42e4a482110a7ba0c7e12ba6b1db28fdaed2743c28578bbf76cd7
 ```
 
-This image is the preferred provenance for machine-specific static claims in this repository.
+This is the reference parent for the baseline raw-ROM EC carve and raw-ROM FDM offsets. Its bytes were not available for a new whole-image verification during consolidation. The earlier claim that a raw-ROM DXE slice matched an updater slice byte for byte is not promoted to a verified comparison without the source ranges and comparison output.
 
-## Boot animation resource
+## EC extraction representations
 
-BIOS 1.15 contains an OEM animated resource rather than only a static BMP.
+| Representation | Parent address space | Start | Length | Evidence |
+|---|---|---:|---:|---|
+| Preferred baseline EC image | Raw ROM | `0x081000` | `0x20000` | Retained analysis report and digest |
+| Earlier updater EC extraction | Nested `isflash.bin` | `0x268E30` | `0x18000` | Independently repeated extraction; digest matched |
 
-Static analysis found:
+The different lengths are significant. The 98,304-byte updater carve must not silently replace the 128 KiB image used for the baseline banked-EC analysis. The [EC reference](embedded-controller.md) specifies the code and XRAM landmarks associated with the latter.
 
-```text
-format:     animated GIF
-dimensions: 800 × 600
-frames:     60
-duration:   ~1.74 seconds
-GUID:       931F77D1-10FE-48BF-AB72-773D389E3FAA
-```
+## Boot graphics
 
-The resource is associated with `OemBadgingSupportDxe`.
+The baseline analysis records an animated GIF associated with `OemBadgingSupportDxe`:
 
-Another relevant boot-graphics module identified during the ROM analysis is:
+| Property | Recorded value |
+|---|---|
+| Resource GUID | `931F77D1-10FE-48BF-AB72-773D389E3FAA` |
+| Dimensions | 800 × 600 |
+| Frames | 60 |
+| Duration | Approximately 1.74 seconds |
+| Related module | BootGraphicsResourceTableDxe |
+| Related module GUID | `B8E62775-BB0A-43F0-A843-5BE8B14F8CCD` |
 
-```text
-BootGraphicsResourceTableDxe
-GUID: B8E62775-BB0A-43F0-A843-5BE8B14F8CCD
-```
+The Linux BGRT capture reported `status=0`, `type=0`, `version=1`, `xoffset=1040` and `yoffset=387`. The horizontal relationship `1040 + 800 + 1040 = 2880` is consistent with the recorded panel width. It is a geometric correlation, not an image replacement interface or proof of runtime animation timing.
 
-### Live BGRT evidence
+The [boot-logo investigation](boot-logo-research.md) documents the two examined update mechanisms and their limitations. An exact extracted-GIF digest, byte size and decompressed-image offsets remain pending source recovery (**P11 = NEEDS_EVIDENCE**); the proposed values in the private lead register are not promoted here.
 
-After the BIOS update Linux exposed BGRT metadata:
+## SetupUtility and HII formsets
 
-```text
-status  = 0
-type    = 0
-version = 1
-xoffset = 1040
-yoffset = 387
-```
+The recorded SetupUtility FFS GUID is `FE3542FE-C1D3-4EF8-657C-8048606FF670`. The Boot formset GUID is `2D068309-12AC-45AB-9600-9187513CCDD8`.
 
-The internal display was observed as 2880×1800. An 800-pixel-wide image centered horizontally on a 2880-pixel-wide panel has an offset of exactly 1040 pixels, so the live BGRT placement is consistent with the 800×600 firmware resource found statically.
+The retained option audit identifies separate Power, Advanced, Main, Boot, Security and Exit formsets, plus AMD PBS and AMD CBS HII formsets. The latter are not automatically ordinary children of the OEM Advanced menu. Form reachability, suppression and the recovered option inventory are documented in [BIOS setup options](bios-setup-options.md). The page reports the eight option rows actually present in the excerpt separately from the source-reported PBS 204 and CBS 416 totals; P01 remains `NEEDS_SOURCE_EXPORT`.
 
-This geometric consistency is useful corroboration, but BGRT itself describes the boot image presented to the OS; it is not a generic runtime API for replacing the firmware resource.
-
-## Logo-only update mechanisms
-
-A later audit followed the two obvious generic Insyde logo-update mechanisms into the exact P916F-STX BIOS 1.15 implementation.
-
-### H2OFFT `-edt4f` / IHISI Type 0x54
-
-The generic Insyde route maps a logo extra-data operation to IHISI Type `0x54`.
-
-On this machine, the relevant `ChipsetSvcSmm` callback was identified at:
+### Quiet Boot
 
 ```text
-protocol +0xA8
-RVA 0x221C
+QuestionId:       0x1064
+VarStore:         SystemConfig
+VarStore GUID:    A04A27F4-DF00-4D42-B552-39511302113D
+VarStore offset:  0x6E
+Disabled:         0x00
+Enabled:          0x01
 ```
 
-The exact code handles type `0x50` and returns `EFI_UNSUPPORTED` for other values. Consequently the examined P916F path does **not** implement the project-specific Type-54 raw-logo writer.
+The baseline live read was reported as `Setup[0x6E] = 0x01`. The source's runtime variable label and IFR VarStore name are retained distinctly; a complete variable-export record is required before generalizing variable-name aliases. This observation establishes the read value, not the result of changing it. Other proposed setup live overlays remain pending (**P12 = NEEDS_EVIDENCE**).
 
-### H2OFFT `-logoupdate` / Type 0x6D
+### Dynamic LID
 
-The generic authenticated logo-update mechanism expects a target identified by:
+The audit identifies `Dynamic LID` / `AmdDynamicLid` at `AMD_PBS_SETUP+0xDF`, with an IFR default of zero. Its runtime effect has not been established. The ACPI lid-state path is a separate fact and does not establish open-lid power-on behavior.
 
-```text
-DACFAB69-F977-4784-8AD8-7724A6F4B440
-```
+## Runtime visibility and permanent modification
 
-Machine-specific checks found:
+The baseline report records a successful SREP runtime reveal of the suppressed Boot page. A separate permanent SetupUtility suppression candidate was noted near extracted-PE file offset `0x2636A0`, with a proposed `0x46` to `0x47` change. That permanent modification was not flashed or live-tested.
 
-```text
-Windows ESRT: no DACFAB69... entry
-raw-ROM HFDM at 0x1D7C000: 47 entries, no DACFAB69... entry
-```
+These are different experiments. A retained candidate configuration is not automatically the one used by the successful session. [Runtime setup visibility](srep-runtime-reveal.md) records the available evidence without publishing an unverified patch recipe. The exact successful SREP build, configuration association, photograph and digest remain pending P13.
 
-Thus the expected dedicated Type-6D logo target is not provisioned in the tested BIOS image.
+## Logo paths and firmware access
 
-### Current logo-replacement conclusion
+The [boot-logo investigation](boot-logo-research.md) keeps the Type-0x54 callback and Type-0x6D provisioning checks separate. The Type-0x54 callback rejects the examined raw-logo request; the Type-0x6D target GUID was absent from the recorded ESRT and 47-entry raw-ROM FDM result. These bounded results do not establish that every OEM-specific logo mechanism is impossible.
 
-For BIOS 1.15:
+The retained PSP sysfs observation reports ROM Armor enforced. The available evidence does not justify a complete map of permitted flash operations or a universal claim about Linux dumping support. See [firmware access](firmware-access.md), which consolidates acquisition, PSP and region-map source gates rather than presenting proposed diagnostics as a live transcript.
 
-```text
-Type 0x54 raw logo update  -> exact P916F callback rejects it
-Type 0x6D signed logo      -> required target region not provisioned
-```
+## Firmware portability boundary
 
-No enabled/provisioned logo-only update path has therefore been established on this machine. This does not mathematically rule out every conceivable third OEM-specific mechanism, but neither of the standard Insyde paths investigated is usable as a proven low-risk logo updater.
-
-The complete evidence chain is in [`boot-logo-research.md`](boot-logo-research.md).
-
-## Insyde SetupUtility
-
-The exact SetupUtility FFS GUID identified in BIOS 1.15 is:
-
-```text
-FE3542FE-C1D3-4EF8-657C-8048606FF670
-```
-
-The Boot formset GUID identified during IFR work is:
-
-```text
-2D068309-12AC-45AB-9600-9187513CCDD8
-```
-
-These exact identifiers supersede the earlier shortened note `FE3542...`.
-
-## Quiet Boot
-
-Static IFR/SetupUtility analysis identified the **Quiet Boot** question.
-
-Known details:
-
-```text
-QuestionId:         0x1064
-VarStore:           SystemConfig
-VarStore GUID:      A04A27F4-DF00-4D42-B552-39511302113D
-VarStore offset:    0x6E
-0x00:               Disabled
-0x01:               Enabled
-```
-
-A live runtime read on the researched machine observed:
-
-```text
-Setup[0x6E] = 0x01
-```
-
-so Quiet Boot was enabled at that point.
-
-### Stock suppression and SREP runtime reveal
-
-The relevant Boot settings block was located under a `SuppressIf (TRUE)` condition in the static IFR.
-
-A static binary-analysis landmark identified the suppression expression around SetupUtility PE offset:
-
-```text
-0x2636A0
-```
-
-with a candidate byte-level change discussed during analysis (`0x46 -> 0x47`). That permanent binary firmware modification was **not live-tested** and should remain only a reverse-engineering landmark.
-
-Separately, **Smokeless Runtime EFI Patcher (SREP)** was actually booted on the machine. Its console reported a successful search/patch result, and the subsequently visible BIOS Boot page contained options including:
-
-```text
-Quick Boot
-Quiet Boot
-Network Stack
-PXE Boot Capability
-USB Boot
-UEFI OS Fast Boot
-```
-
-Therefore the repository distinguishes clearly between:
-
-- **static permanent firmware patch candidate** — not applied/tested;
-- **runtime SREP reveal of the suppressed Boot form** — observed working on the real machine.
-
-## Dynamic LID / AmdDynamicLid
-
-Firmware forms/strings contain:
-
-```text
-Dynamic LID
-AmdDynamicLid
-```
-
-Static setup analysis associated the option with:
-
-```text
-AMD_PBS_SETUP + 0xDF
-default value = 0 (disabled)
-```
-
-ACPI separately exposes lid state through `_SB.LID._LID`, `LIDS` and EC-backed lid state.
-
-What has **not** been proven is that this setup option means "open lid to power on". The name alone is insufficient to assign that behavior.
-
-## Cross-flash warning
-
-Sibling model names encountered during research include:
-
-```text
-P916F-HPT-R
-P916F-ARL
-```
-
-Their firmware must not be treated as interchangeable with `P916F-STX`. Similar platform naming is not evidence of matching board power sequencing, EC firmware, GPIO routing, flash layout or setup defaults.
+`P916F-HPT-R` and `P916F-ARL` are related names encountered during research, not validated compatible firmware targets. Board power sequencing, EC firmware, GPIO assignments, flash layout and setup defaults must be established separately before any cross-platform inference.

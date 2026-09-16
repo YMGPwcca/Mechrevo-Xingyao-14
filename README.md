@@ -1,100 +1,63 @@
-# MECHREVO Xingyao 14 / P916F-STX Technical Documentation
+# MECHREVO Xingyao 14 / P916F-STX technical reference
 
-This repository is an **exhaustive technical reference** for the MECHREVO Xingyao 14 (机械革命 星耀14) based on the `P916F-STX` platform.
+Technical investigation of the MECHREVO Xingyao 14 (机械革命 星耀14): platform identity, Insyde UEFI firmware, ACPI/WMI, the ITE embedded controller, battery charging, thermal interfaces and Linux integration.
 
-The goal is not to keep the documentation short. The goal is to preserve as much technically useful, reproducible information as possible about this machine: hardware identity, BIOS/UEFI internals, ACPI/WMI behavior, embedded-controller architecture, reverse-engineered protocols, Linux-visible interfaces, OEM software findings, exact firmware artifacts, failed hypotheses, and live validation evidence.
+The reference preserves register maps, implementation details, artifact identities, original evidence and rejected hypotheses. It contains documentation, not a driver or hardware-control toolkit. [Source coverage](docs/research-sources.md) and [outstanding evidence](docs/documentation-status.md) bound each conclusion.
 
-It intentionally contains no driver, utility or application source code. Command/output excerpts, disassembly fragments, register maps and protocol traces are included where they are useful as technical evidence.
+## Applicability and safety
 
-## Documentation policy
+The principal baseline is **P916F-STX, BIOS 1.15, firmware-reported EC 1.15**. Compatibility with P916F-HPT-R, P916F-ARL, other Xingyao products or later firmware is not established.
 
-This repository prefers **complete technical context over aggressive summarization**.
-
-A detail belongs here when it helps another engineer:
-
-- identify this exact platform or firmware revision;
-- reproduce or verify a finding;
-- understand an interface, register, method, protocol or firmware component;
-- distinguish a machine-specific result from a generic OEM implementation;
-- understand why a candidate path was accepted or rejected;
-- avoid repeating a failed reverse-engineering route;
-- continue the investigation from the same evidence base.
-
-Personal desktop preferences and unrelated operating-system customization are out of scope, but technically relevant experiments are not removed merely because they failed. Failed paths are retained when they constrain the implementation or prevent future researchers from repeating the same assumption.
+Offline file inspection does not access the laptop. Hardware state queries may still require I/O-port writes; EC setters can change charging or thermal state. Saving setup changes can write NVRAM, while SPI flashing modifies firmware storage. These are distinct operations with distinct effects. A successful getter or a static implementation does not validate a setter. Untested setters and permanent patch landmarks are research evidence, not validated operating procedures.
 
 ## Reference platform
 
-| Component | Value |
+| Component | Recorded value |
 |---|---|
 | Product | MECHREVO Xingyao 14 / 机械革命 星耀14 |
-| Platform | `MECHREVO XINGYAO Series-P916F-STX` |
-| CPU | AMD Ryzen AI 9 365 |
-| CPU family | AMD Strix Point |
-| iGPU | Radeon 880M |
-| Memory | 32 GiB on the documented unit |
-| Internal display | 2880×1800 |
-| Tested BIOS | `1.15` |
-| EC version reported by firmware | `1.15` |
-| BIOS build-date string | `05/07/2026` |
+| Platform string | `MECHREVO XINGYAO Series-P916F-STX` |
+| Processor | AMD Ryzen AI 9 365, Strix Point |
+| Processor topology | 10 cores / 20 threads, retained platform specification |
+| Integrated graphics | Radeon 880M |
+| Installed memory | 32 GiB on the investigated unit |
+| Internal display | 2880 × 1800; exact refresh-rate evidence pending |
+| System BIOS | `1.15` |
+| Firmware-reported EC | `1.15` |
+| BIOS build-date string | `05/07/2026`; date format not converted |
 | EC silicon | ITE `0x5571`, revision `0x07` |
+| Observed Linux environment | CachyOS / Arch-family; exact kernel version pending |
 
-The IT557x firmware contains its own internal build strings such as `IT557x V1.09 E00 - 20230831`; those are a different version namespace from the system firmware's `EC 1.15` label.
+The EC image's internal string `IT557x V1.09 E00 - 20230831` is a separate version namespace. The earlier BIOS 1.09 package is a historical artifact, not proof of identical live behavior. See [hardware identity](docs/hardware-platform.md) for attribution and scope.
+
+## Principal findings
+
+- **Battery charge control:** the recorded PMC2 experiment at I/O ports `0x68`/`0x6C` established an enabled `T1=80%`, `T2=100%` configuration that stopped charging near the displayed 79–80% boundary and survived a normal reboot. Arbitrary threshold pairs, T2 semantics and complete EC-power-loss persistence remain unresolved. [Protocol](docs/battery-charge-limit.md) · [Raw validation](docs/validation.md).
+- **EC access architecture:** standard ACPI EC traffic, SystemMemory-backed H2RAM and PMC2 are distinct interfaces. The documented aperture maps host physical `0xFEEC2300..0xFEEC23FF` to EC XRAM `0x0300..0x03FF`. The candidate I2EC path at I/O `0x380` failed its recorded cross-check. [EC reference](docs/embedded-controller.md).
+- **Thermal interfaces:** DSDT excerpts establish `GFNS`, `GPFM`, `SPFM`, two fan-telemetry fields and the Fn+X dispatch. `SPFM` calls `THMM` before profile-specific command validation; a failure result does not prove no side effects. ALIB parameters are not measured RPM curves. [Thermal reference](docs/thermal-performance.md).
+- **Firmware and setup:** the investigation identifies the boot animation, SetupUtility and separate AMD PBS/CBS formsets. The setup page preserves the available audit rows, not the complete option inventory. The two examined generic logo-update paths did not establish a supported logo-only update mechanism. [Firmware](docs/firmware-bios.md) · [Setup options](docs/bios-setup-options.md) · [Boot graphics](docs/boot-logo-research.md).
+- **Firmware access:** the retained PSP attribute reports ROM Armor enforcement. It does not establish every protection field or prove that all acquisition methods fail. H2OFFT embedded capabilities are separate from a live acquisition transcript. [Access evidence](docs/firmware-access.md).
+- **ACPI and Linux:** direct `WMAA` evaluation returns a two-element package, not an unconditional flat 256-byte buffer. The recorded Linux environment exposed battery telemetry but not generic charge-threshold attributes. [ACPI/WMI](docs/acpi-wmi.md) · [Linux](docs/linux.md).
+- **Audio:** ALC256 playback and a logical stereo FL/FR endpoint were observed. The reported physical four-driver layout lacks independent source attribution; Windows-equivalent OEM tuning remains unresolved. [Audio reference](docs/audio.md).
 
 ## Documentation map
 
-### Platform and firmware
+| Area | References |
+|---|---|
+| Platform | [Hardware](docs/hardware-platform.md), [Linux](docs/linux.md), [audio](docs/audio.md) |
+| BIOS / UEFI | [Firmware structure](docs/firmware-bios.md), [setup options](docs/bios-setup-options.md), [access](docs/firmware-access.md), [boot graphics](docs/boot-logo-research.md), [runtime setup visibility](docs/srep-runtime-reveal.md) |
+| Embedded controller | [Architecture/registers](docs/embedded-controller.md), [charge protocol](docs/battery-charge-limit.md), [thermal interfaces](docs/thermal-performance.md) |
+| ACPI / OEM | [ACPI/WMI](docs/acpi-wmi.md), [Control Center analysis](docs/control-center.md) |
+| Evidence | [Validation](docs/validation.md), [claim matrix](docs/evidence-matrix.md), [artifacts](docs/research-artifacts.md), [sources](docs/research-sources.md) |
+| Research process | [Methodology](docs/reverse-engineering-methodology.md), [tooling](docs/reproduction-tooling.md), [technical questions](docs/open-questions.md), [documentation status](docs/documentation-status.md) |
 
-- [`docs/hardware-platform.md`](docs/hardware-platform.md) — hardware identity, display, battery, audio and firmware-version namespaces.
-- [`docs/firmware-bios.md`](docs/firmware-bios.md) — BIOS 1.15 package structure, raw ROM, boot graphics, SetupUtility, hidden forms and Dynamic LID.
-- [`docs/boot-logo-research.md`](docs/boot-logo-research.md) — detailed analysis of Insyde logo-update mechanisms and the exact P916F implementation.
-- [`docs/research-artifacts.md`](docs/research-artifacts.md) — hashes, offsets, binary provenance and artifact relationships.
+## Reading conventions
 
-### Embedded controller and battery
+Protocol bytes use hexadecimal `0x` notation: 80% encodes as `0x50`, not `0x80`; 100% encodes as `0x64`. Raw output remains unchanged and is annotated outside evidence blocks. Addresses retain their explicit ROM, updater, extracted PE, EC CODE/XRAM, host physical MMIO, I/O-port or VarStore context.
 
-- [`docs/embedded-controller.md`](docs/embedded-controller.md) — IT5571 firmware image, H2RAM mapping, PMC2 transport, XRAM fields and charge-control internals.
-- [`docs/battery-charge-limit.md`](docs/battery-charge-limit.md) — reverse-engineered charge-limit protocol, static handler mapping and current semantic model.
-- [`docs/validation.md`](docs/validation.md) — live hardware validation, raw outputs and measured behavior.
+[Evidence classes](docs/reverse-engineering-methodology.md#evidence-classification) distinguish live observations, static implementation facts, artifact measurements, inference, comparative evidence, rejected hypotheses and untested behavior. Source availability is a separate property; a retained historical result is not a new hardware test.
 
-### ACPI, OEM software and Linux
+## Distribution, contributions and license
 
-- [`docs/acpi-wmi.md`](docs/acpi-wmi.md) — ACPI EC map, battery object, OEM control methods, events and Huawei-compatible WMI findings.
-- [`docs/control-center.md`](docs/control-center.md) — static findings from MECHREVO Windows Control Center and the generic-vs-P916F distinction.
-- [`docs/linux.md`](docs/linux.md) — Linux-visible platform interfaces, power-supply exposure, ACPI/EC integration and missing upstream abstractions.
-- [`docs/audio.md`](docs/audio.md) — codec path, logical speaker topology, Windows OEM processing and Linux observations.
+Vendor executables, raw firmware dumps, EC binaries and proprietary extracted resources are not distributed. The [artifact registry](docs/research-artifacts.md) records available sizes, digests and derivation relationships. A matching digest identifies bytes; it does not certify authenticity, compatibility or safe flashing.
 
-### Evidence and unresolved areas
-
-- [`docs/evidence-matrix.md`](docs/evidence-matrix.md) — claim-by-claim confidence and provenance.
-- [`docs/reverse-engineering-methodology.md`](docs/reverse-engineering-methodology.md) — how firmware, ACPI and EC findings were derived and cross-checked.
-- [`docs/open-questions.md`](docs/open-questions.md) — unresolved technical behavior only.
-
-## Evidence terminology
-
-- **Live-confirmed** — observed on the actual P916F-STX hardware.
-- **Static-confirmed** — established from the exact machine firmware or ACPI tables.
-- **Inferred** — strongly suggested by implementation or measured behavior but not fully proven.
-- **Comparative only** — comes from generic OEM software or another platform and is not P916F proof.
-- **Rejected / superseded** — tested or re-evaluated and should not be used as the P916F implementation.
-
-## Battery charge-limit result
-
-The P916F-STX implements a firmware-level battery charge limiter through ITE PMC2:
-
-```text
-PMC2 DATA            = 0x68
-PMC2 COMMAND/STATUS  = 0x6C
-```
-
-The validated configuration:
-
-```text
-state = enabled
-T1    = 80
-T2    = 100
-```
-
-stops charging around the displayed 79–80% boundary, permits charging again below that boundary, and persists across a normal reboot.
-
-Only the `80/100` threshold pair has been behaviorally validated. The firmware accepts threshold values from 0 through 100, but the general semantics of arbitrary T1/T2 pairs are not yet established.
-
-The static implementation, host protocol and live evidence are documented separately so readers can distinguish what the firmware code proves from what was actually exercised on hardware.
+Original documentation is licensed under [CC BY 4.0](LICENSE). [NOTICE.md](NOTICE.md) defines the third-party boundary. Corrections and evidence contributions should follow [CONTRIBUTING.md](CONTRIBUTING.md).
