@@ -2,6 +2,8 @@
 
 This report preserves the recorded P916F-STX EC and battery experiments from `SRC-BASELINE` (stable source crosswalk [S1](research-sources.md#project-sources)). No hardware tests were rerun during documentation consolidation. Capture dates, the complete original probe programs and some environment versions were not retained; this limits end-to-end reproduction, not the identity of the quoted observations. The report is the behavioral counterpart to the static analysis in [embedded-controller.md](embedded-controller.md) and [battery-charge-limit.md](battery-charge-limit.md).
 
+A later live capture supplied after the machine lost all system power because the battery was depleted is included under [reboot and power-loss persistence](#10-reboot-persistence). That capture does not restate the BIOS or firmware-reported EC revision, so it is attached to the investigated P916F-STX unit without independently asserting a firmware-version identity for that specific sample.
+
 Historical output is preserved verbatim. In labels such as `F2 80` and `F3 100`, the threshold arguments are decimal: the specified wire pairs are `0xF2 0x50` and `0xF3 0x64`. Other `F1` subcommand labels use hexadecimal notation in the protocol specification; raw labels below remain unchanged. Units in battery output are `capacity` in percent, `voltage_now` in µV, `power_now` in µW and `energy_now` in µWh. Blank output is not interpreted as zero.
 
 ## 1. Live ITE Super-I/O identity
@@ -227,7 +229,34 @@ Recorded conclusion:
 configuration persists across a normal reboot
 ```
 
-The result does not establish persistence through complete EC power loss, battery disconnection, firmware update or another reset class.
+This remains direct evidence for normal-reboot persistence only.
+
+### Battery-depletion full-power-loss observation
+
+A later observation was recorded after the machine had fully lost system power because the battery was depleted. On the next powered session, the battery-limit query and current battery telemetry returned:
+
+```text
+=== P916F-STX Battery Limit ===
+Enabled : 0 (OFF)
+T1      : 0% (0x00)
+T2      : 0% (0x00)
+
+=== Current battery state ===
+AC online: 1
+SOC      : 89
+Status   : Charging
+Power    : 21137000
+Energy   : 64350000
+Voltage  : 13431000
+```
+
+The previously configured `state=1`, `T1=80`, `T2=100` values were therefore not present after this recorded battery-depletion full-power-loss event. The observed state had returned to disabled with both thresholds zero. At the same time, AC was online and the battery at 89% reported `Charging`.
+
+This is **Live-confirmed** clearing for this event. It does not identify the exact clearing mechanism or transition. The capture cannot distinguish clearing during depletion/brownout from an EC reset, firmware initialization on the next boot, or another transition associated with complete power loss. It also does not establish behavior for every G3 transition, physical battery disconnect, CMOS/RTC-power removal, explicit EC reset, firmware update or other reset class.
+
+The operational consequence is bounded but direct: after battery depletion causes complete system power loss, the charge-limit state must not be assumed to remain enabled; it should be read back before relying on the limit.
+
+A standalone copy of this new observation and its boundaries is retained in [`battery-limit-power-loss-observation.md`](battery-limit-power-loss-observation.md).
 
 ## 11. High-load battery-energy test
 
@@ -281,7 +310,7 @@ Reported stored energy decreased over the interval and charging was reported at 
 
 ## 12. Current validated configuration
 
-The retained known-good state was:
+The retained known-good configured state was:
 
 ```text
 state = 1
@@ -289,18 +318,18 @@ T1    = 80
 T2    = 100
 ```
 
-This is the only threshold pair behaviorally validated in this report.
+This is the only threshold pair behaviorally validated in this report. It is a known-good configured state, not a persistence guarantee: the later depletion event returned `0 / 0 / 0` as documented above.
 
 ## 13. Validation boundaries
 
-The following statements were not established:
+The following statements remain unestablished:
 
 ```text
 T1=N, T2=100 always creates an N% cap
 T2 is definitely a recharge threshold
 T2 is definitely an upper/lower hysteresis boundary
-configuration survives complete EC power loss
+every complete EC/G3/reset class clears the configuration in the same way
 power_now=0 proves the adapter supplies every instantaneous system watt
 ```
 
-The disable/reset path was not exercised. Thermal AML findings, including `THMM` ordering and the `_Q40`/`_Q81`/`_QA0`/`_QA1` query paths, are static source evidence documented separately in [thermal/performance interfaces](thermal-performance.md); they do not count as additional battery experiments. Package hashing and other source-recovery work likewise do not change this validation record.
+The disable/reset path was not exercised. The newly observed post-depletion `0 / 0 / 0` state must not be treated as proof that the `0xF1 0x10` handler executed or that the fields are necessarily stored only in volatile SRAM. Thermal AML findings, including `THMM` ordering and the `_Q40`/`_Q81`/`_QA0`/`_QA1` query paths, are static source evidence documented separately in [thermal/performance interfaces](thermal-performance.md); they do not count as additional battery experiments. Package hashing and other source-recovery work likewise do not change this validation record.
