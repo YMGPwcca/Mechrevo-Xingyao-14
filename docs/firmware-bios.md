@@ -105,7 +105,7 @@ The [boot-logo investigation](boot-logo-research.md) documents the two examined 
 
 The recorded SetupUtility FFS GUID is `FE3542FE-C1D3-4EF8-657C-8048606FF670`. The Boot formset GUID is `2D068309-12AC-45AB-9600-9187513CCDD8`.
 
-The retained option audit identifies separate Power, Advanced, Main, Boot, Security and Exit formsets, plus AMD PBS and AMD CBS HII formsets. The latter are not automatically ordinary children of the OEM Advanced menu. Form reachability, suppression and the recovered option inventory are documented in [BIOS setup options](bios-setup-options.md). The page reports the eight option rows actually present in the excerpt separately from the source-reported PBS 204 and CBS 416 totals; P01 remains `NEEDS_SOURCE_EXPORT`.
+The full [S2 audit](research-sources.md#project-sources), `P916F-STX_BIOS_1.15_full_option_audit.md` (`file_00000000179c8206a3dc01afcd82478c`), identifies Power, Advanced, Main, Boot, Security and Exit formsets plus separate AMD PBS/CBS HII formsets. They are not automatically ordinary children of OEM Advanced. [BIOS setup options](bios-setup-options.md) preserves all 8 formset, 28 reachability, 151 SetupUtility question/action, 204 PBS and 416 CBS rows. These are independently counted source-table categories. P01 source import is complete; IFR defaults and static presence do not establish live values, hardware support or behavior.
 
 ### Quiet Boot
 

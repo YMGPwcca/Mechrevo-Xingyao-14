@@ -92,6 +92,49 @@ FL / FR only
 
 No retained evidence establishes that the machine requires a user-visible four-channel ALSA profile to drive all physical speaker elements. A forced 4.0 profile is therefore not documented as a verified remedy.
 
+### Recovered device and kernel capture
+
+Source [S11](research-sources.md#project-sources), `Pasted text(71).txt`, records the following Linux interfaces. These are observations from that capture, not a new hardware test or a universal device configuration.
+
+| Layer | Captured observation | Boundary |
+|---|---|---|
+| PipeWire | Server `pipewire-0` reports `1.6.7`; the listed clients also display `1.6.7` | Client display strings do not independently identify installed WirePlumber package versions |
+| Internal sink | `Ryzen HD Audio Controller Speaker`, selected sink, volume `1.00` | Snapshot state, not calibrated gain |
+| Capture endpoints | `Ryzen HD Audio Controller Digital Microphone`; `Ryzen HD Audio Controller Stereo Microphone` | Logical endpoints, not physical microphone count |
+| Capture state | Digital endpoint volume `1.00`; selected stereo endpoint volume `0.32 MUTED` | Capture-time state only |
+| Active monitor inputs | `ALC256 Analog:capture_FL`, `capture_FR`; `Digital Microphone:capture_FL`, `capture_FR` | Both paths appear active in PulseAudio Volume Control streams; not an acoustic quality test |
+| ALSA cards | `0 Generic`, `1 Generic_1`: `HD-Audio Generic`; `2 acppdmmach`: `acp-pdm-mach` | Card numbers are enumeration-local |
+| ACP machine identity | `MECHREVO-XINGYAOSeries-Standard-XINGYAOSeries_P916F_STX` | Identifies this capture's reported platform, not BIOS revision |
+| Playback | Card 0 HDMI devices `3`, `7`, `8`, `9`; card 1 device `0`, `ALC256 Analog`; each reports one subdevice available out of one | Enumeration, not a playback test of all HDMI outputs |
+| Radeon HDA PCI | `c1:00.1`, `1002:1640`, driver in use `snd_hda_intel` | Subsystem `1d05:e004` |
+| AMD audio coprocessor PCI | `c1:00.5`, `1022:15e2`, revision `70`, driver in use `snd_acp_pci` | Subsystem `1d05:e004`; listed candidate modules are not all active drivers |
+| Ryzen HDA PCI | `c1:00.6`, `1022:15e3`, driver in use `snd_hda_intel` | Subsystem `1d05:e004` |
+
+The ALSA HDA card resources are recorded as `0xb04c8000`, IRQ `127`, and `0xb04c0000`, IRQ `128`. They are observed host resources, not EC addresses or portable constants. The PCI listing also records a permission error reading `/sys/bus/pci/devices/0000:00:08.3/label`; the capture is not represented as an error-free complete PCI inventory.
+
+The recorded kernel log shows `snd_hda_intel` applying patch firmware named `xingyao.fw` to both `0000:c1:00.1` and `0000:c1:00.6`. The message payloads are:
+
+```text
+snd_hda_intel 0000:c1:00.1: Applying patch firmware 'xingyao.fw'
+snd_hda_intel 0000:c1:00.6: Applying patch firmware 'xingyao.fw'
+```
+
+Only the message payloads are excerpted; timestamps and host identifiers are omitted. The source does not include the patch bytes, digest, provenance or contents. This observation does not identify what the patch changes, establish Nahimic processing or speaker tuning, or show that it is required on other kernels. The log also records `c1:00.1` bound to `c1:00.0` through `amdgpu_dm_audio_component_bind_ops [amdgpu]`.
+
+The captured codec message payloads are:
+
+```text
+ALC256: SKU not ready 0x50f00010
+autoconfig for ALC256: line_outs=2 (0x1b/0x14/0x0/0x0/0x0) type:speaker
+   speaker_outs=0 (0x0/0x0/0x0/0x0/0x0)
+   hp_outs=1 (0x21/0x0/0x0/0x0/0x0)
+   mono: mono_out=0x0
+   inputs:
+     Mic=0x12
+```
+
+These are codec autoconfiguration fields, not physical speaker counts. In particular, `speaker_outs=0` does not contradict the separate `line_outs=2 ... type:speaker` report or prove that speakers are absent. The kernel creates HDMI/DP input entries for PCM `3`, `7`, `8`, `9` and an internal headphone entry. Full loaded-module coverage is maintained in [Linux inventory](linux.md#recorded-audio-module-inventory).
+
 ## 7. Software processing experiments
 
 Software EQ and processing experiments through EasyEffects and ordinary Linux audio configuration changed the sound, but no tested profile reproduced the Windows OEM/Nahimic result exactly. The complete preset and measurement set were not retained; this page does not invent a replacement preset or channel map.
@@ -117,9 +160,9 @@ The following remain unresolved:
 - endpoint APO properties used by the OEM image;
 - additional amplifier-specific tuning programmed by a Windows driver or service outside the standard APO chain;
 - physical driver count and wiring/topology, requiring primary inspection evidence;
-- microphone endpoint names and HDA/ACP/SOF module versions, requiring correctly identified captures.
+- exact kernel, HDA/ACP/SOF and ALSA/WirePlumber package versions; endpoint names and loaded module names are recovered in S11.
 
-Until these are recovered, a Linux EQ may approximate the Windows sound but cannot be described as an exact reproduction. Missing device inventory and environment records are tracked under [P14 and P15](documentation-status.md#pending-evidence).
+The recovered endpoint and kernel observations do not establish OEM-equivalent processing. Physical topology remains P14; the unresolved environment and standard-profile portions of P15 are tracked separately in [documentation status](documentation-status.md#pending-evidence).
 
 ## 10. Current technical model
 

@@ -2,7 +2,7 @@
 
 This reference records Linux-visible interfaces and platform behavior for the investigated MECHREVO Xingyao 14 / `P916F-STX`. It covers hardware/firmware integration, not desktop-environment configuration or a shipped driver. The principal live records are from CachyOS / an Arch-family installation on the documented unit; an Ubuntu live environment was used for an audio comparison. Device-availability statements are scoped to those recorded environments, not to every kernel or distribution. Sources are [S1 / `SRC-BASELINE`](research-sources.md#project-sources), the identified ACPI excerpts [`SRC-AML-A`](research-sources.md#project-sources), [`SRC-AML-B`](research-sources.md#project-sources), [`SRC-AML-C`](research-sources.md#project-sources) and [`SRC-AML-D`](research-sources.md#project-sources), and the general Linux interface definitions in [E1](research-sources.md#external-interface-and-licensing-references).
 
-Exact kernel, PipeWire, WirePlumber and ALSA versions were not retained. Their absence is tracked under [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence).
+Source S11 records PipeWire server `1.6.7` and a loaded audio-module inventory. Exact kernel, ALSA and installed WirePlumber package versions remain unestablished; the version displayed beside a PipeWire client is not independently a package-version query. See [P15](documentation-status.md#pending-evidence).
 
 ## Platform identity
 
@@ -73,6 +73,19 @@ charge_behaviour
 ```
 
 Their absence means that the P916F charge limiter was not surfaced through the generic Linux power-supply threshold ABI in the inspected environment. It does not mean that the firmware feature is absent.
+
+The recovered S3 text includes a separate original sysfs snapshot. Exact output lines are retained below; the shell prompt and host identity are omitted:
+
+```text
+capacity                             95
+status                               Discharging
+voltage_now                          13240000
+power_now                            750000
+```
+
+The voltage and power values are in µV and µW. The captured command conditionally printed only existing attributes from its requested list; `current_now` and the three generic threshold/behaviour attributes produced no lines and are also absent from the displayed LCBT listing. This supports absence in that capture, not every kernel. The directory listing additionally includes `alarm`, `capacity_level`, `cycle_count`, `energy_full`, `energy_full_design`, `energy_now`, `manufacturer`, `model_name`, `present`, `serial_number`, `technology`, `type`, `voltage_min_design`, `extensions`, `hwmon2` and `power`; the names do not disclose the unqueried values. The device link targets `PNP0C0A:00`. No serial value is published.
+
+The S3 Huawei-WMI search output lists driver bind/unbind/uevent, driver override, modalias, power-management and subsystem probing attributes, but no battery-threshold attribute. It is a recorded sysfs inspection, not a new WMI command invocation or proof that all OEM WMI functions are unavailable.
 
 ## Firmware charge control
 
@@ -219,7 +232,27 @@ output_FR
 
 The baseline report describes four physical speaker drivers, but that count lacks an independently retained product specification or physical-inspection record. Stereo logical channels neither verify nor disprove that reported layout. Playback was functional in the principal CachyOS installation, while the Ubuntu live comparison reproduced the overall perceived deficit against the Windows OEM result. The exact OEM-equivalent DSP profile remains unrecovered; details are in [`audio.md`](audio.md).
 
-Camera-node counts, microphone endpoint names and complete sound-module inventories mentioned during planning were not recovered as sufficiently identified captures. A V4L2 node count would not by itself establish a physical camera count, and a module name would not by itself prove which endpoint it drives. These details remain [P15](documentation-status.md#pending-evidence), not asserted platform topology.
+Source [S11](research-sources.md#project-sources), `Pasted text(71).txt`, recovers the device/audio enumeration. **Linux exposed two V4L2 device entries named FHD Camera.** Their displayed IDs were `45` and `46`; the video source was `134`, `FHD Camera (V4L2)`. These are session-local graph IDs, not physical camera identifiers. The capture does not establish two physical cameras, sensor models, USB identities or capabilities.
+
+The audio source names were `Ryzen HD Audio Controller Digital Microphone` and `Ryzen HD Audio Controller Stereo Microphone`. ALSA included `acp-pdm-mach` with platform identity `MECHREVO-XINGYAOSeries-Standard-XINGYAOSeries_P916F_STX`. The selected speaker, analog/digital capture paths, PCI driver bindings, codec pin messages and `xingyao.fw` observation are documented in [audio](audio.md#recovered-device-and-kernel-capture).
+
+The graph listed a default configured sink `easyeffects_sink` and source `alsa_input.pci-0000_c1_00.6.HiFi__Mic2__source`. Configured defaults and the currently selected graph objects are different observations; neither establishes a required processing setup. The source contains no `platform_profile` inspection.
+
+### Recorded audio module inventory
+
+The S11 `lsmod` output lists the modules below. This inventory distinguishes loaded modules from the PCI listing's **driver in use** (`snd_acp_pci` for `c1:00.5`, `snd_hda_intel` for `c1:00.1` and `c1:00.6`). Module presence and reference counts do not prove that a module actively drives every endpoint or that its removal is safe.
+
+| Group | Loaded module names |
+|---|---|
+| Sequencer/timing | `snd_seq_dummy`, `snd_hrtimer`, `snd_seq`, `snd_seq_device`, `snd_timer` |
+| ACP and machine support | `snd_acp_legacy_mach`, `snd_acp_mach`, `snd_soc_nau8821`, `snd_acp3x_rn`, `snd_acp70`, `snd_acp_pdm`, `snd_acp_i2s`, `snd_soc_dmic`, `snd_acp_pcm`, `snd_acp_pci`, `snd_amd_acpi_mach`, `snd_acp_legacy_common`, `snd_acp_config` |
+| SOF | `snd_sof_amd_acp70`, `snd_sof_amd_acp63`, `snd_sof_amd_vangogh`, `snd_sof_amd_rembrandt`, `snd_sof_amd_renoir`, `snd_sof_amd_acp`, `snd_sof_pci`, `snd_sof_xtensa_dsp`, `snd_sof`, `snd_sof_utils` |
+| PCI alternatives / matching | `snd_pci_ps`, `snd_soc_acpi_amd_match`, `snd_soc_acpi_amd_sdca_quirks`, `snd_pci_acp6x`, `snd_pci_acp5x`, `snd_rn_pci_acp3x`, `snd_pci_acp3x` |
+| SoundWire / SDCA | `soundwire_amd`, `soundwire_generic_allocation`, `snd_amd_sdw_acpi`, `soundwire_bus`, `snd_soc_sdca`, `snd_intel_sdw_acpi` |
+| HDA | `snd_hda_codec_alc269`, `snd_hda_codec_realtek_lib`, `snd_hda_codec_atihdmi`, `snd_hda_scodec_component`, `snd_hda_codec_generic`, `snd_hda_codec_hdmi`, `snd_hda_intel`, `snd_hda_codec`, `snd_hda_core`, `snd_intel_dspcfg` |
+| Shared ALSA / ASoC | `snd_soc_core`, `snd_pcm_dmaengine`, `snd_compress`, `snd_hwdep`, `snd_pcm`, `snd_ctl_led`, `snd`, `snd_soc_acpi` |
+
+The dependency column names `snd_acp70` as a user of `snd_acp_pdm`, `snd_acp_i2s` and `snd_acp_pcm`; it names `snd_acp_mach` as a user of `snd_soc_nau8821`, and `snd_acp_legacy_mach` as a user of `snd_acp_mach`. These are module reference relationships, not independent proof of a physical NAU8821 codec. SOF variants and older ACP modules also appear loaded; their presence is not a recommendation to switch drivers.
 
 ## Standard profile portability
 
@@ -237,5 +270,5 @@ The recovered evidence is sufficient to document PMC2 ports, command framing, en
 | [P08 — PSP protection/version fields](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Original multi-attribute PSP/ROM Armor capture; do not infer fields from `rom_armor_enforced=1` |
 | [P10 — protected-region map and DXE equality](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Original `-pq`/comparison records or both identified source byte ranges and comparison output |
 | [P14 — physical audio topology and OEM tuning](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Product specification/inspection and recovered OEM processing evidence |
-| [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Correct-machine camera, microphone and module captures, storage identifiers, kernel/audio-stack versions and panel/adapter details |
+| [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence) | Partially recovered | S11 supplies camera/microphone/module names and PipeWire server version; kernel/ALSA/WirePlumber package versions, storage identifiers and panel/adapter details remain missing |
 | [T34 / platform profile portability](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Identified `platform_profile` sysfs inspection on this unit and kernel |

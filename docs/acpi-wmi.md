@@ -2,13 +2,15 @@
 
 ## Source scope
 
-This page combines the machine-specific baseline report (`SRC-BASELINE`, stable crosswalk [S1](research-sources.md#project-sources)) with selected recovered ACPI source excerpts: `SRC-AML-A` (`S4`), `SRC-AML-B` (`S5`), `SRC-AML-C` (`S3`) and `SRC-AML-D` (`S4`). The excerpts establish the method bodies and dispatch described here, but they are not a complete DSDT export. A complete DSDT header and binary digest remain unavailable in the recovered set; that source-identity limitation is tracked in [documentation status](documentation-status.md#pending-evidence).
+This page combines the machine-specific baseline report (S1) with the full recovered Project text extraction `Pasted text(4).txt` (S3, exact File ID `file_00000000177881fd8806584f4122e837`) and selected S4/S5 excerpts. S3 includes complete THMM and helper bodies, EC fields, query handlers and a Linux battery/sysfs capture. Its digest identifies the extracted-text representation, not original File Library raw bytes. It contains repeated source ranges and discontinuities, not a complete DSDT. Original table headers, full binary digest and firmware association remain P02b; complete THMM source recovery is closed as P02a. See [source register](research-sources.md#project-sources) and [status](documentation-status.md#pending-evidence).
 
 A static method body or BMOF metadata does not by itself establish a live setter, a complete WMI schema or a production-safe host transport. The battery limiter reached through ITE PMC2 is documented separately in [battery-charge-limit.md](battery-charge-limit.md).
 
 ## EC regions and devices
 
 The investigated ACPI environment identifies an embedded controller with `_HID=PNP0C09` and GPE `0x0B`. Standard ACPI EC traffic uses the conventional I/O path at `0x62`/`0x66`.
+
+S3 also shows `EC0._STA` returning `0x0F`, `OKEC` initialized to zero and mutexes `Z009`/`QEVT` initialized with sync level `0x00`. Its ERAM field declaration uses `ByteAcc, NoLock, Preserve`. Bytes `0x00..0x03` are `ECMV`, `ECSV`, `ECBV`, `ECTV`, and `0x04..0x07` are `FLT0..FLT3`, all 8-bit fields. These declarations do not supply measured values or independently establish their higher-level meaning. `LID._STA` and the captured `ACAD._STA` each return `0x0F`; the preceding adapter method fragment returns EC `ACIN`, but its complete body is not present at that source boundary.
 
 A separate declaration exposes shared state through physical memory:
 

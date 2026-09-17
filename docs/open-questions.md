@@ -59,7 +59,7 @@ The recovered AML establishes field layouts and dispatch relationships, but not 
 - The side effects and runtime success conditions of the September `SPFM` branches using `ECMD(0x94)` and `ECMD(0x95)`.
 - Why an earlier source names `ECMD(0x91)` and `ECMD(0x92)`, and which firmware image that source belongs to. The maps must not be merged until identity is established.
 - The exact `THMM` / `ALIB` parameter contract, including units and platform conditions.
-- Whether the complete Balance/LID ALIB sequences contain equal parameters and whether those parameters have any established relationship to EC fan-table rows.
+- Whether the equal, fully recovered Balance/LID ALIB parameter sequences have any established relationship to EC fan-table rows; sequence equality alone does not establish table equality.
 - Tachometer registers, duty/mode fields, PWM controller semantics, target-RPM arrays, temperature/index axis and profile persistence.
 - A safe, model- and revision-specific fan setter, if one exists.
 
@@ -93,5 +93,5 @@ ALC256 enumeration, working playback and the logical stereo endpoint are recorde
 
 - Compatibility of the documented internal addresses and PMC2 protocol with future BIOS/EC revisions.
 - Whether the firmware-reported `EC 1.15` and the internal `IT557x V1.09` image string describe components that change independently in later packages.
-- Complete camera, microphone, audio-module, kernel/PipeWire, panel/EDID and adapter inventory for the same machine and OS environment.
+- Exact kernel, ALSA and WirePlumber package versions, panel/EDID and adapter inventory, and standard `platform_profile` exposure. S11 recovers camera/microphone interfaces, loaded audio modules and PipeWire server `1.6.7`, not complete hardware topology.
 - Whether any result from sibling names such as `P916F-HPT-R` or `P916F-ARL` transfers to `P916F-STX`; no such transfer is assumed.
