@@ -45,6 +45,7 @@ The matrix uses one of these source-availability descriptions:
 - **Full bytes/capture included** — the relevant byte material or complete retained capture is available in the public reference or its included evidence record.
 - **Selected excerpt included** — the relevant source lines are included, but the parent file/table or surrounding context is not complete.
 - **Retained report only** — a prior report records the result, but the original byte dump, terminal capture or photograph is not included.
+- **Source located privately** — the exact source object is known but raw-byte export or public redistribution is unavailable.
 - **Source identified but not exported** — the source has a stable identity or File Library locator, but the needed complete content is not in the package.
 - **Unverified lead** — a proposed value or locator is retained only to guide later recovery and is not evidence for the claim.
 
@@ -70,11 +71,19 @@ Set T1 = 80%:
 Set T2 = 100%:
   command byte -> I/O 0x6C: 0xF3
   data byte    -> I/O 0x68: 0x64
+
+Set T1 = 85%:
+  command byte -> I/O 0x6C: 0xF2
+  data byte    -> I/O 0x68: 0x55
+
+Set T2 = 90%:
+  command byte -> I/O 0x6C: 0xF3
+  data byte    -> I/O 0x68: 0x5A
 ```
 
-Historical raw validation labels remain unchanged in [`validation.md`](validation.md#5-threshold-writereadback-while-disabled); the explanatory notation distinguishes the decimal argument from the encoded data byte. This rule prevents decimal `100` from becoming `0x100`, and prevents two bytes written to one port from being presented as the actual transport.
+Historical raw validation labels remain unchanged in [`validation.md`](validation.md#5-threshold-writereadback-while-disabled); the explanatory notation distinguishes decimal arguments from encoded data bytes. This rule prevents decimal `100` from becoming `0x100`, and prevents two bytes written to one port from being presented as the actual transport.
 
-For Linux telemetry, units are explained where used: the retained `energy_now` values `63154000` and `62661000` are micro-watt-hours, corresponding to a reported decrease of approximately `0.493 Wh`. The capture interval of 313 seconds and the stress command's five-minute runtime are different observations and are not substituted for one another.
+For Linux telemetry, units are explained where used. The earlier `energy_now` values `63154000` and `62661000` are micro-watt-hours, corresponding to a reported decrease of approximately `0.493 Wh`. The later T2-isolation trace moved from approximately `68.116 Wh` to `64.972 Wh`, a reported decrease of `3.144 Wh` while AC remained online. Endpoint averages are explicitly labeled approximate because workload, telemetry quantization and wall-side power were not controlled as calibrated measurements.
 
 ## 4. Address-space taxonomy
 
@@ -238,7 +247,7 @@ XRAM[0x0394]        SOC used by control logic
 
 Relevant code landmarks include `CODE:0xED7A` (set enable bit), `CODE:0xED8E` (test enable bit), `CODE:0xEDBA` (validate/write `0x0D13`), `CODE:0xEDDF` (validate/write `0x0D14`), `CODE:0xF508` (reset/disable path), `CODE:0xF526` (read `0x0D13`), `CODE:0xF621` (read `0x0D14`) and `CODE:0xC063` (SOC/threshold decision path).
 
-The range-check code was interpreted instruction by instruction. The `SETB C` before `SUBB A,#0x64` makes exactly decimal 100 valid and 101 invalid, establishing an inclusive `0..100` stored range. This does not establish the end-user semantics of T2, the exact hysteresis or behavior for every threshold pair.
+The range-check code was interpreted instruction by instruction. The `SETB C` before `SUBB A,#0x64` makes exactly decimal 100 valid and 101 invalid, establishing an inclusive `0..100` stored range. That static range check alone does not establish behavioral semantics. The later S19 `85/90` experiment independently establishes T1 as the lower charge/hold boundary and T2 as the upper active-discharge boundary on the live unit. Behavior for every arbitrary pair, exact comparator timing and exact electrical implementation remain open.
 
 The relevant comparison pattern is:
 
@@ -255,6 +264,8 @@ JNC  invalid
 ```
 
 The decision routine feeds working words around `XRAM[0x0D54..0x0D57]` and `XRAM[0x0D65..0x0D68]`. A later worker stages charger transactions associated with command numbers `0x14` and `0x15`; naming them as complete Smart Battery charger semantics remains an inference until the full path is decoded.
+
+A secondary charger-control branch also modifies bit 5 of charger register `0x12`. The register contract is compatible with a BQ25700A/BQ25710-family `EN_LEARN`-like function, but exact charger silicon identity is not established. This family-level interpretation is not needed to establish the high-level active-discharge behavior because the latter is live-confirmed by the S19 energy trace.
 
 ## 9. Live host I/O discovery and recorded transport
 
@@ -281,26 +292,38 @@ The ordering of `THMM` before the `ECMD(0x94)` / `ECMD(0x95)` branches is materi
 
 ## 11. Progressive validation strategy
 
-The battery feature's historical validation proceeded from lower to higher state impact: read initial state; write threshold values while disabled; read them back; enable only after the readback matched; observe charging above the configured boundary; observe discharge and recharge near the boundary; reboot and read the values again; then observe battery-energy telemetry under CPU load. This chronology separates protocol correctness from charger behavior and is retained as an observation record, not as a request to repeat hardware writes.
+The battery work deliberately separated protocol validation from behavioral semantics and persistence.
 
-The retained sequence was:
+The first phase progressed from lower to higher state impact: read initial state; write threshold values while disabled; read them back; enable only after readback matched; observe charging around the 80% boundary; reboot and read the values again; then observe battery-energy telemetry under CPU load.
+
+The retained first-phase sequence was:
 
 ```text
 Read initial state:       0xF1 0x12, 0xF1 0x13, 0xF1 0x14
 Set thresholds disabled:  0xF2 0x50, 0xF3 0x64
 Read thresholds again
 Enable after readback:    0xF1 0x11
-Observe capped charging and recharge
+Observe 80/100 cap behavior
 Read back after reboot
 Observe energy telemetry under CPU load
 ```
 
-These lines identify the historical validation order. They are not a general-purpose command sequence, and the raw labels are not rewritten into a different byte notation.
+A later depletion event added a persistence counterexample: the state that survived an ordinary reboot was observed as `0/0/0` after complete battery depletion caused system power loss. The exact clearing mechanism remains unestablished.
 
-The validated configuration is specifically `T1=80%`, `T2=100%`. The record does not promote arbitrary `T1=N` behavior, complete EC-power-loss persistence, exact hysteresis or a disable/reset rollback experiment. See [`battery-charge-limit.md`](battery-charge-limit.md#scope-and-validated-behavior) and [`validation.md`](validation.md#10-reboot-persistence).
+The semantic-isolation phase then used `T1=85`, `T2=90`, verified immediate readback, and deliberately observed all three reachable regions:
 
+```text
+SOC below T1      -> Charging
+T1..T2 region     -> Hold / Not charging
+SOC above T2      -> sustained active battery discharge with AC online
+return to T2      -> active discharge released; hold restored
+```
 
-The retained cross-check was:
+The T2 experiment additionally retained a reported `energy_now` decrease from approximately `68.116 Wh` to `64.972 Wh`, which distinguishes genuine net battery discharge from a status-label-only transition.
+
+These lines identify historical validation order and evidence. They are not a general-purpose command script. The repository still does not promote arbitrary threshold pairs, exact comparator timing, a production transport, or the static `0xF1 0x10` reset path to live-tested behavior.
+
+The retained rejected-I2EC cross-check was:
 
 ```text
 I2EC control : EC[200D] = 0xFF
@@ -340,14 +363,18 @@ Three search snippets or three readings of one secondary summary are not three c
 
 ## 14. Static facts, behavioral semantics and package claims
 
-The repository keeps implementation facts separate from user-facing semantics. For example, `XRAM[0x0D14]` is a validated field used by charge logic, while its exact user-facing T2 role remains unresolved. Both threshold setters accept the static inclusive range `0..100`, while only `T1=80%` / `T2=100%` has behavioral validation.
+The repository keeps implementation facts separate from behavioral semantics and lower-level mechanism claims.
+
+The battery subsystem is a useful example. Static firmware analysis establishes `XRAM[0x0D13]` and `XRAM[0x0D14]` as range-checked threshold fields and shows both are consumed by the charge-control path. That static fact alone did not establish what T2 meant. The later S19 `85/90` experiment separately **Live-confirmed** the high-level behavior: T1 is the lower charge/hold boundary and T2 is the upper boundary of sustained active discharge with AC online. The exact charger silicon, exact register naming, fractional comparator point, electrical power-path mechanism and behavior of every arbitrary threshold pair remain separate unresolved questions.
+
+This distinction prevents a common error: a behavioral result can be established even when the exact lower-level mechanism remains inferred, while a plausible register-family interpretation does not become a machine identity claim merely because it fits the behavior.
 
 The same boundary applies to setup, SREP and packages. An IFR control can be statically present while hidden at runtime; an SREP candidate can describe intended formset operations while its known-good session remains unconfirmed; an archive can contain H2OFFT help while no live `-g`, `-iv` or `-pq` invocation is established. A package hash confirms the measured bytes, not vendor authenticity, compatibility or safe execution.
 
-CPU model attribution is kept separate from topology: the canonical model is AMD Ryzen AI 9 365, while a stress output line reporting 20 workers is not independent proof of 10 physical cores / 20 logical CPUs. Audio attribution is likewise separate: ALC256 and logical FL/FR are recorded observations; four physical drivers remain a reported layout without an independent product or inspection source. AC-online `Not charging` with `power_now=0` and a decrease in `energy_now` are electrical observations, not a complete charger-topology characterization.
+CPU model attribution is kept separate from topology: the canonical model is AMD Ryzen AI 9 365, while a stress output line reporting 20 workers is not independent proof of 10 physical cores / 20 logical CPUs. Audio attribution is likewise separate: ALC256 and logical FL/FR are recorded observations; four physical drivers remain a reported layout without an independent product or inspection source. AC-online battery telemetry is an electrical observation at the battery interface, not by itself a complete charger-topology characterization.
 
 ## 15. Safety and publication boundaries
 
 The investigation intentionally did not brute-force EC commands, write unknown H2RAM/MMIO values, enable generic EC write support merely to test offsets, issue Huawei threshold SET after the GET failed, copy sibling-model offsets, run vendor executables as a substitute for source recovery, or flash a permanent SetupUtility/SREP landmark. These boundaries explain why some command space and hardware behavior remain unresolved.
 
-No document should present the following as a tested operation: a direct PWM writer, a firmware flash procedure, a raw-ROM dump command, a permanent PE patch, a known-good SREP configuration, an arbitrary threshold pair, or a generic Linux interface that the machine did not expose. Public pages retain technical detail, rejected hypotheses, source identifiers and failure observations while excluding vendor binaries, raw ROM/EC images and private transcripts.
+No document should present the following as a tested operation: a direct PWM writer, a firmware flash procedure, a raw-ROM dump command, a permanent PE patch, a known-good SREP configuration, an arbitrary threshold pair, or a generic Linux interface that the machine did not expose. The 85/90 battery policy is a recorded historical experiment, not a blanket recommendation for arbitrary values. Public pages retain technical detail, rejected hypotheses, source identifiers and failure observations while excluding vendor binaries, raw ROM/EC images and private transcripts.
