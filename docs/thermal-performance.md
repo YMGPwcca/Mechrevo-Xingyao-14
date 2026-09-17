@@ -2,9 +2,9 @@
 
 ## Evidence scope
 
-The interface definitions on this page are derived from the complete recovered S3 Project text extraction and the selected S4/S5 DSDT excerpts, not from a complete ACPI-table export or a new live fan experiment. The source material is `SRC-AML-C` (`S3`) for thermal fields, `THMM`, `_Q16`, `_Q40`, `_Q81`, `_QA0` and `_QA1`, `SRC-AML-A` (`S4`) for `GFNS`/`GVER`, `SRC-AML-B` (`S5`) for `GPFM`/`SPFM`/`GKBT`/`SKBT`, and `SRC-AML-D` (`S4`) for line locators. See [source register](research-sources.md#project-sources) and the [pending-evidence register](documentation-status.md#pending-evidence).
+The interface definitions on this page are derived from the complete recovered S3 Project text extraction and the selected S4/S5 DSDT excerpts. S13 adds a recovered live H2RAM/GFNS capture, while S6 now includes the recovered historical April source that uses the older `0x91` / `0x92` SPFM command pair. The source material is `SRC-AML-C` (`S3`) for thermal fields, `THMM`, `_Q16`, `_Q40`, `_Q81`, `_QA0` and `_QA1`, `SRC-AML-A` (`S4`) for `GFNS`/`GVER`, `SRC-AML-B` (`S5`) for `GPFM`/`SPFM`/`GKBT`/`SKBT`, `SRC-AML-D` (`S4`) for line locators, `SRC-FAN-LIVE` (`S13`) for the live field/query correlation, and `SRC-AML-OLD` (`S6`) for the historical discrepancy. See [source register](research-sources.md#project-sources) and the [pending-evidence register](documentation-status.md#pending-evidence).
 
-The S3 extraction includes the complete THMM body and query handlers; it is a concatenated source capture with discontinuities elsewhere, not a compilable complete DSDT. Its digest identifies the extracted text, not original raw File Library bytes. These sources establish AML field layout, dispatch and control flow. They do not provide a new live validation of fan speed, profile transitions or raw PWM writes. No unsupported live fan data is asserted here. The September excerpts use `ECMD(0x94)` and `ECMD(0x95)` in `SPFM`; an earlier April source uses `0x91` and `0x92`, but its firmware identity is incomplete. The two maps must not be merged.
+The S3 extraction includes the complete THMM body and query handlers; it is a concatenated source capture with discontinuities elsewhere, not a compilable complete DSDT. Its digest identifies the extracted text, not original raw File Library bytes. These sources establish AML field layout, dispatch and control flow. S13 additionally establishes that the two live GFNS result words track the two live H2RAM FNS fields. It does **not** establish that the numerical unit is RPM, provide an independent tachometer calibration, validate a profile write, or recover raw PWM control. The September excerpts use `ECMD(0x94)` and `ECMD(0x95)` in `SPFM`; the recovered April source uses `0x91` and `0x92`, but its exact same-session firmware identity remains unresolved. The two maps must not be merged.
 
 ## EC-visible fields
 
@@ -32,7 +32,7 @@ Using the baseline H2RAM mapping gives these address relationships:
 | `APFL` | `0x70` | 1 bit | `0x0370` bit 0 | `0xFEEC2370` bit 0 |
 | `MSFL` | `0x70` | 1 bit | `0x0370` bit 1 | `0xFEEC2370` bit 1 |
 
-These are field/address correlations, not a recommendation for direct MMIO access. Atomicity, update rate, invalid-value encoding and agreement with an independent tachometer have not been established by the recovered excerpts. `FNS0` and `FNS1` establish two firmware-visible telemetry fields; they do not establish mechanical fan count or an RPM calibration.
+These are field/address correlations, not a recommendation for direct MMIO access. Atomicity, update rate and invalid-value encoding have not been established. S13 now provides a live cross-interface correlation for `FNS0`/`FNS1`, but no independent tachometer establishes that the raw word equals RPM. `FNS0` and `FNS1` establish two firmware-visible telemetry fields; they do not independently establish mechanical fan count.
 
 ## GFNS: fan telemetry
 
@@ -71,7 +71,33 @@ STAT = Zero
 Return (BUFF)
 ```
 
-The word occupies two response bytes beginning at offset one; the expected byte interpretation is low byte followed by high byte. The method establishes a two-channel fan-speed query at the AML interface level. Its recovered code does not establish a measured RPM calibration, fan stopping behavior or polling interval. Historical RPM samples and an independent tachometer/MMIO comparison require source recovery before they can be presented as live validation.
+The word occupies two response bytes beginning at offset one; the expected byte interpretation is low byte followed by high byte.
+
+### Recovered live H2RAM/GFNS correlation
+
+S13 (`Pasted text(7).txt`, file ID `file_000000004e1081fdb6c0290bf45d182f`) contains a direct host-memory read followed by live GFNS calls. The relevant H2RAM bytes were:
+
+```text
+host 0xFEEC233B..0xFEEC233E: 91 0f cd 0e
+```
+
+Interpreting the two 16-bit little-endian fields gives the snapshots:
+
+```text
+FNS0 snapshot: 0x0F91 = 3985 decimal
+FNS1 snapshot: 0x0ECD = 3789 decimal
+```
+
+The immediately following live WMI calls were issued through the available `huawei-wmi` debug interface:
+
+```text
+selector 0x00 -> status 0x00, result bytes 99 0f -> word 0x0F99 = 3993 decimal
+selector 0x01 -> status 0x00, result bytes e1 0e -> word 0x0EE1 = 3809 decimal
+```
+
+The MMIO/H2RAM read and WMI calls were sequential rather than atomic, so byte-for-byte equality is not expected for a changing field. Both channels remain close to their corresponding field values and the returned layout matches the static GFNS implementation. This is **Live-confirmed cross-interface correlation** between GFNS and the two dynamic FNS fields.
+
+The raw decimal values are deliberately not labelled RPM. `FSPD`, fan-related method naming and dynamic values establish fan telemetry semantics, but no independent tachometer, scaling contract or calibrated unit source was recovered. Earlier prose that quoted specific RPM values remains outside the validated set until its original capture and unit evidence are recovered.
 
 ## GPFM: profile-state query
 
@@ -250,7 +276,7 @@ Method (_Q16, 0, NotSerialized)  // _Qxx: EC Query, xx=0x00-0xFF
 }
 ```
 
-The labels support the static profile names. This code is not a raw capture of a physical Fn+X press or a measured `0x02`-to-`0x01` transition. The historical GFNS RPM values mentioned in an unresolved lead are not reproduced as live results here.
+The labels support the static profile names. This code is not a raw capture of a physical Fn+X press or a measured `0x02`-to-`0x01` transition. The previously reported Fn+X/GPFM transition remains pending as P04b and is not reconstructed here.
 
 ## Query and notification order
 
@@ -310,9 +336,26 @@ The sequence is an AML notification-order observation. It is not a timing guaran
 
 ## Source-version discrepancy
 
-The earlier April source `SRC-AML-OLD` (`S6`) contains the same general `SPFM` structure but uses `ECMD(0x91)` and `ECMD(0x92)`. The September sources `SRC-AML-B`/`SRC-AML-C` (`S5`/`S3`) use `0x94` and `0x95`. Without complete table headers, hashes and firmware association for both captures, the reason for the difference is not established.
+The historical source discrepancy is no longer merely a source locator. S6 now contains two recovered records:
 
-The September map is the one specified above. The earlier map is retained only as a provenance discrepancy and must not be used as an alternative P916F-STX 1.15 command recipe.
+```text
+Pasted text(16).txt
+  file ID:   file_00000000f5ac72069ac142ca1b550984
+  size:      7465 bytes
+  SHA-256:   21d40ec647d5859a2b6feb19ec206dd296eaba45666d7d3e8bc4b17da5966d34
+
+dsdt.dsl
+  file ID:   file_00000000d828720693d8a857cd39fefd
+  size:      253103 bytes
+  SHA-256:   43f4b40e70ac867416b9137e3d41ae12ead76224038dcfb6a4943bfc41466296
+  DSDT len:  0x836B / 33643 bytes
+```
+
+Both recovered April records contain the same general `SPFM` structure and use `ECMD(0x91)` and `ECMD(0x92)`. The September sources `SRC-AML-B`/`SRC-AML-C` (`S5`/`S3`) use `0x94` and `0x95`.
+
+The April source identity is therefore recovered, but exact same-session firmware association is still unresolved. Separate historical kernel captures identify P916F-STX BIOS 1.09 in the broader April investigation, which is corroborating context rather than proof that this exact DSDT was exported under that BIOS. The repository therefore retains the two source-scoped maps without declaring why they differ.
+
+The September map is the one specified above for the recovered September source. The April map remains historical and must not be used as an interchangeable P916F-STX 1.15 command recipe.
 
 ## Source locators that are not fan tables
 
@@ -327,7 +370,7 @@ These strings are source locators only. They are not a recovered fan-table defin
 
 ## Unresolved EC-level control
 
-The recovered AML does not establish:
+The recovered AML and live query capture do not establish:
 
 - a safe generic fan setter;
 - complete tachometer/PWM register semantics;
@@ -336,6 +379,7 @@ The recovered AML does not establish:
 - temperature-to-row thresholds;
 - profile persistence;
 - the runtime condition that selects LID mode;
-- mechanical fan count or an independent RPM calibration.
+- mechanical fan count or an independent RPM calibration;
+- the previously reported live Fn+X/GPFM transition.
 
-A future EC analysis would need the exact image digest, bank/address context and disassembly or data extraction for those claims. Until then, no manual PWM writes, reconstructed fan curves or unsupported live fan values are published. The missing tach/PWM/table evidence is tracked as `P05 NEEDS_EVIDENCE`; the missing live GFNS/Fn+X observations are `P04 NEEDS_EVIDENCE` in [documentation status](documentation-status.md#pending-evidence).
+A future EC analysis would need the exact image digest, bank/address context and disassembly or data extraction for the direct control claims. Until then, no manual PWM writes, reconstructed fan curves or unsupported RPM values are published. The missing tach/PWM/table evidence is tracked as `P05 NEEDS_EVIDENCE`; live GFNS/H2RAM correlation is closed as P04a, while the missing Fn+X/GPFM transition remains P04b in [documentation status](documentation-status.md#pending-evidence).

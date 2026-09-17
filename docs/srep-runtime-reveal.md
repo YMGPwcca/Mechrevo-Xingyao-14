@@ -2,7 +2,7 @@
 
 ## Scope
 
-The firmware investigation distinguishes static form presence, runtime visibility changes and persistent firmware modification. Sources are the baseline report S1, setup audit S2 and retained candidate configuration S7 in the [project source register](research-sources.md#project-sources). This page deliberately does not publish a runnable bypass configuration.
+The firmware investigation distinguishes static form presence, runtime visibility changes and persistent firmware modification. Sources are the baseline report S1, setup audit S2, retained candidate configuration S7 and the newly recovered photograph/configuration records S14 in the [project source register](research-sources.md#project-sources). This page deliberately does not publish a runnable bypass configuration.
 
 ## Static form structure
 
@@ -10,7 +10,7 @@ The setup audit identifies OEM SetupUtility formsets and separate AMD PBS/CBS HI
 
 These categories are not interchangeable. Exposing a top-level formset does not necessarily remove child suppression, and removing suppression can reveal controls for absent or unsupported hardware. The [option inventory](bios-setup-options.md) retains the distinct visibility classes and the source's selected row counts.
 
-## Retained candidate configuration
+## Retained candidate configurations
 
 The project source collection identifies `P916F_STX_115_SREP_full_reveal.cfg` (S7). Its complete displayed text is retained privately as an inert source excerpt, but its directives are not reproduced here because they would form a reusable visibility-bypass configuration. The source names H2OFormBrowserDxe visibility records for three identified formsets:
 
@@ -20,26 +20,56 @@ The project source collection identifies `P916F_STX_115_SREP_full_reveal.cfg` (S
 | AMD CBS | `B04535E3-3004-4946-9EB7-149428983053` |
 | Power | `A6712873-925F-46C6-90B4-A40F86A0917B` |
 
-It also names `SuppressIfPatcher` and a subsequent load/execute operation for `SetupUtilityApp`. This establishes the configuration's intended operations, not their successful execution on the investigated machine. The exact configuration is not published as a runnable known-good patch because its association with the successful session is unconfirmed.
+It also names `SuppressIfPatcher` and a subsequent load/execute operation for `SetupUtilityApp`. This establishes the configuration's intended operations, not their successful execution on the investigated machine.
 
-A separately named formset-only configuration was referenced during planning, but its complete contents and result were not recovered. No failure/success chronology is invented for those candidate files.
+Two additional Quiet-Boot candidate records were recovered as S14:
 
-## Recorded runtime observation
+| Candidate | File ID | Recovered text representation | Boundary |
+|---|---|---|---|
+| `SREP_Config_P916F-STX_1.15_QuietBoot.cfg` | `file_000000009a3c81fdaa0f114764116d19` | 152 bytes; SHA-256 `b7359ed2189796efbfff6be5e82c0d7ba7ba969fcef9156366b25949919297ef` | Targets the SetupUtility suppression-pattern change with a normal patch operation |
+| `SREP_Config_P916F-STX_1.15_QuietBoot_v2.cfg` | `file_00000000616c81fd925350de1bc670b0` | 158 bytes; SHA-256 `8a56d7d2c89cb5fa48a49669e18f75797cfebef72f95e64fee40bf6ffafac022` | Targets the same pattern with a fast-patch operation |
 
-The baseline report states that SREP reported a successful search/patch and that a subsequent BIOS photograph showed the Boot page with:
+The exact directive bodies remain private evidence rather than a published turnkey patch recipe. Their existence and hashes establish the candidate records, not which one produced the successful session.
+
+## Recovered runtime photograph
+
+The post-reveal BIOS photograph is now recovered directly from the Project/Library collection:
+
+```text
+filename:  image-1789545520742.jpg
+file ID:   file_00000000969082309523c0a97474cb7f
+size:      373251 bytes
+SHA-256:   38b11bb1a736a9373632c78b1949128164cfb7a842b0c67068196cc1fa5d52db
+```
+
+The photographed Boot page visibly contains at least:
 
 ```text
 Quick Boot
 Quiet Boot
 Network Stack
 PXE Boot Capability
+PXE / HTTP Boot Retry Policy
+Power Up In Standby Support
+Storage PCI Option ROM Access
+ESATA drive boot access right
+Add Boot Options
+ACPI Selection
 USB Boot
 UEFI OS Fast Boot
 ```
 
-This remains a recorded live observation from the investigation. The original photograph, patcher binary version/digest and exact successful configuration are not yet linked in the recovered source set. The evidence therefore supports reporting that the page was revealed, but not publishing a fully reproducible configuration as validated.
+This is direct photographic evidence that an expanded Boot page was visible on the investigated MECHREVO system. It is stronger than the earlier retained prose-only report for the page contents.
 
-The reported page reveal and the candidate configuration are separate records. The former is a retained result on the machine; the latter documents intended target formsets and operations. No claim is made that the candidate was the configuration used for the reported reveal.
+The photograph does **not** by itself identify:
+
+- the SREP executable build or digest;
+- the exact configuration file loaded in that boot;
+- whether the candidate v1, v2 or another configuration produced the page;
+- the exact order of patcher messages before entering SetupUtility;
+- whether changing any newly visible option is safe or functional.
+
+Accordingly, the page reveal is a recovered runtime observation, while the successful-session configuration association remains pending.
 
 ## Quiet Boot value and behavior
 
@@ -55,6 +85,6 @@ The candidate byte change is retained as a reverse-engineering landmark only. No
 
 ## Reproduction and pending gates
 
-A reproducible account would require the exact patcher build, the final configuration digest, the firmware/module identity, the console result and the associated photograph. Until that set is recovered, the runtime observation and candidate file remain separate evidence records. Pending gate **P13** is `NEEDS_CONFIRMATION`: recover the successful session evidence and final configuration digest before calling any candidate known-good. The exact permanent landmark remains untested regardless of the SREP result.
+A fully reproducible account still requires the exact patcher build, the final configuration digest used in the successful run, the firmware/module identity and the console result associated with the recovered photograph. Pending gate **P13** is therefore `PHOTO_RECOVERED / NEEDS_CONFIRMATION`: the photographic result is no longer missing, but no candidate configuration is promoted to known-good without its session linkage.
 
 Unknown hardware behavior and missing source material are tracked in [open questions](open-questions.md) and [documentation status](documentation-status.md#pending-evidence).

@@ -1,6 +1,6 @@
 # Audio subsystem
 
-This reference records the internal codec path, Linux-visible topology and the cross-platform behavior observed on the investigated MECHREVO Xingyao 14 / `P916F-STX`. The baseline report is [S1 / `SRC-BASELINE`](research-sources.md#project-sources). It contains no calibrated acoustic measurements, complete amplifier schematic or recovered OEM DSP coefficients. The reported four-driver layout therefore remains distinct from the directly observed logical audio interfaces.
+This reference records the internal codec path, Linux-visible topology and the cross-platform behavior observed on the investigated MECHREVO Xingyao 14 / `P916F-STX`. The baseline report is [S1 / `SRC-BASELINE`](research-sources.md#project-sources). Linux device enumeration is supplemented by S11, and the recovered Windows Nahimic/A-Volute export is S15. No calibrated acoustic measurement, complete amplifier schematic or complete OEM DSP graph has been recovered. The reported four-driver layout therefore remains distinct from the directly observed logical audio interfaces.
 
 ## 1. Codec path
 
@@ -51,7 +51,7 @@ reported physical layout  !=  host-visible channel count
 four reported drivers      !=  four host-visible audio channels
 ```
 
-The absence of an LFE or 4.0 endpoint is not evidence that two physical drivers are unused. Logical stereo enumeration also cannot independently validate the reported four-driver layout. Closing that question requires [P14 — physical audio topology and OEM tuning](documentation-status.md#pending-evidence).
+The absence of an LFE or 4.0 endpoint is not evidence that two physical drivers are unused. Logical stereo enumeration also cannot independently validate the reported four-driver layout. Closing that question still requires physical inspection or an attributable product/teardown source.
 
 ## 4. Windows OEM processing
 
@@ -62,9 +62,82 @@ The Windows OEM software stack was reported to include Nahimic / A-Volute proces
 - tonal balance;
 - spatial or other enhancement processing.
 
-These are comparative listening observations, not calibrated frequency-response, distortion or loudness measurements. The retained record does not support reconstructing their exact magnitude.
+These are comparative listening observations, not calibrated frequency-response, distortion or loudness measurements. The retained record does not support reconstructing their exact acoustic magnitude.
 
-The OEM processing names identify the reported software stack, but they do not by themselves prove which coefficients, endpoint APO properties or amplifier programming were applied to this unit.
+### Recovered Nahimic/A-Volute export
+
+Source S15 is a recovered raw archive:
+
+```text
+NahimicExport.zip
+size:    20,004,555 bytes
+SHA-256: 4099d9631368deff8bc39ee07a948134097d56b75db39f6e8b0ff3b0a9de0906
+entries: 112
+```
+
+The archive contains Nahimic application state, A-Volute/Nahimic registry exports, APO/service components and preset files. This materially improves the Windows-side evidence, but the archive must not be interpreted as a complete serialized DSP runtime state.
+
+`LocalState/EQPresets.json` records the selected application preset for each profile family:
+
+| Profile family | Recorded selected preset |
+|---|---|
+| Communication | `Custom` |
+| Gaming | `Custom` |
+| Movie | `Dialogues` |
+| Music | `Dynamic` |
+
+This mapping records per-family selections. It does **not** prove which profile family was active during a particular listening comparison or application session.
+
+The recovered ten-band `Music/Dynamic.json` preset is:
+
+| Band | Gain |
+|---:|---:|
+| 32 Hz | +1 dB |
+| 64 Hz | +5 dB |
+| 125 Hz | +2 dB |
+| 250 Hz | -2 dB |
+| 500 Hz | -2 dB |
+| 1 kHz | 0 dB |
+| 2 kHz | 0 dB |
+| 4 kHz | +1 dB |
+| 8 kHz | +5 dB |
+| 16 kHz | +2 dB |
+
+The corresponding `OriginalSettings/Dynamic.json` carries the same ten values. The recovered `Movie/Dialogues.json` preset is:
+
+| Band | Gain |
+|---:|---:|
+| 32 Hz | -3 dB |
+| 64 Hz | -3 dB |
+| 125 Hz | -1 dB |
+| 250 Hz | +1 dB |
+| 500 Hz | +3 dB |
+| 1 kHz | +4 dB |
+| 2 kHz | +5 dB |
+| 4 kHz | +3 dB |
+| 8 kHz | +3 dB |
+| 16 kHz | +1 dB |
+
+The archive also retains additional built-in presets for Communication, Gaming, Movie and Music. These preset tables are now **Artifact-confirmed application-level EQ data**. They are not evidence for every other Nahimic processing block such as bass synthesis, voice enhancement, limiter/compressor behavior, virtual surround, dynamic profile switching or amplifier programming.
+
+### Endpoint/APO integration evidence
+
+The registry exports include Nahimic APO 4 stream, mode and endpoint effects and A-Volute integration with a Realtek HDA endpoint whose hardware path contains:
+
+```text
+HDAUDIO\FUNC_01&VEN_10EC&DEV_0256&SUBSYS_1D05E004&REV_1000
+```
+
+This is consistent with the live Linux ALC256 codec and subsystem identity. The export also contains:
+
+```text
+HAPEnableNahimicDSP_Zen5 = O
+DCHNahimic = 1
+```
+
+and endpoint interface records that name `A-Volute.Nahimic` for the Realtek endpoint. These records establish Windows-side Nahimic/A-Volute integration on the captured installation. They do not define the semantics of every opaque registry GUID/value or prove the exact runtime state of every APO parameter.
+
+The archive contains the Windows application identity `A-Volute.Nahimic_1.10.9.0_x64__w2gh52qy24etm` in registry/application paths. That identifies the captured application package reference, not the version of every service, APO DLL or OEM audio driver.
 
 ## 5. Linux behavior
 
@@ -78,7 +151,8 @@ The second Linux environment reduces the likelihood that the difference was caus
 | Speaker playback | Functional under Linux | Live-confirmed | Recorded playback observation; no calibrated acoustic characterization |
 | Host channel model | Stereo FL/FR | Live-confirmed | PipeWire/WirePlumber enumeration; does not establish physical driver count |
 | Cross-installation comparison | Similar perceived deficit in Ubuntu live environment | Comparative only | Retained listening comparison; no controlled acoustic measurement |
-| OEM-equivalent processing | Not recovered | Not established | No exact coefficients or complete Windows endpoint configuration |
+| Nahimic application EQ presets | Recovered from S15 | Artifact-confirmed | Exact archive/preset bytes; not a complete active DSP graph |
+| OEM-equivalent Linux processing | Not recovered | Not established | No complete APO graph, amplifier programming or validated Linux equivalent |
 
 The comparison preserves playback findings without converting a subjective deficit into a hardware-topology claim.
 
@@ -137,7 +211,9 @@ These are codec autoconfiguration fields, not physical speaker counts. In partic
 
 ## 7. Software processing experiments
 
-Software EQ and processing experiments through EasyEffects and ordinary Linux audio configuration changed the sound, but no tested profile reproduced the Windows OEM/Nahimic result exactly. The complete preset and measurement set were not retained; this page does not invent a replacement preset or channel map.
+Software EQ and processing experiments through EasyEffects and ordinary Linux audio configuration changed the sound, but no tested profile reproduced the Windows OEM/Nahimic result exactly. S15 now supplies concrete Nahimic application preset tables, including the ten-band Music/Dynamic values, but it still does not provide a complete transplantable processing graph.
+
+A previously retained JamesDSP / Equalizer APO approximation used the same Music/Dynamic ten-band values plus manually approximated voice, bass and treble filters. Those extra filters were explicitly approximation work, not recovered OEM parameters. They must not be merged into the S15 artifact-confirmed preset table.
 
 Earlier troubleshooting also considered HDA/ACP/SOF-related module options. Those experiments did not establish a different base-driver path as a platform requirement: the codec and speakers already function, while the persistent difference is in tuning and processing quality. This repository therefore does not prescribe disabling SOF or another module option as a verified fix.
 
@@ -145,24 +221,27 @@ A firmware setup menu may contain codec verb-table choices. Their static presenc
 
 ## 8. Why the current conclusion points to DSP/tuning
 
-The available observations are consistent with a missing or different OEM endpoint-processing, equalization or speaker-compensation configuration under Linux. This is an **Inferred** interpretation, not coefficient-level proof. The exact Nahimic/A-Volute parameters have not been recovered, and additional Windows driver/service programming of an amplifier has not been excluded.
+The recovered Windows archive now directly establishes a Nahimic/A-Volute APO stack, Realtek endpoint integration and application-level EQ preset state. Together with functional Linux stereo playback and the cross-installation listening comparison, this strengthens the interpretation that Windows-side processing contributes materially to the perceived difference.
 
-The evidence does not support describing the issue simply as undetected speakers. It also does not establish DSP or EQ as the sole cause. Logical FL/FR, physical driver allocation and OEM processing are separate layers.
+That remains an **Inferred** explanation of the acoustic difference, not proof that EQ alone is the cause. The exact active DSP graph, limiter/compressor behavior, bass/spatial algorithms, endpoint-specific dynamic state and any amplifier programming outside the standard APO chain have not been fully recovered.
+
+The evidence does not support describing the issue simply as undetected speakers. It also does not establish DSP or EQ as the sole cause. Logical FL/FR, physical driver allocation, codec/amp programming and OEM processing are separate layers.
 
 ## 9. What remains unknown
 
 The following remain unresolved:
 
-- exact Nahimic/A-Volute EQ coefficients for this endpoint;
-- dynamic-range compression parameters;
-- bass-enhancement parameters;
+- complete runtime Nahimic/A-Volute DSP graph and non-EQ algorithm parameters;
+- exact active profile family at the moment of each historical Windows/Linux listening comparison;
+- dynamic-range compression / limiter parameters;
+- bass-enhancement and spatial-processing algorithm parameters beyond the recovered preset JSON;
 - channel-specific gain, delay or crossover behavior, if any;
-- endpoint APO properties used by the OEM image;
+- endpoint APO properties not represented by the recovered files;
 - additional amplifier-specific tuning programmed by a Windows driver or service outside the standard APO chain;
 - physical driver count and wiring/topology, requiring primary inspection evidence;
 - exact kernel, HDA/ACP/SOF and ALSA/WirePlumber package versions; endpoint names and loaded module names are recovered in S11.
 
-The recovered endpoint and kernel observations do not establish OEM-equivalent processing. Physical topology remains P14; the unresolved environment and standard-profile portions of P15 are tracked separately in [documentation status](documentation-status.md#pending-evidence).
+The recovered Windows archive closes the earlier blanket gap for application-level EQ presets but does not establish OEM-equivalent processing on Linux. Physical topology and the remaining environment gaps stay tracked in [documentation status](documentation-status.md#pending-evidence).
 
 ## 10. Current technical model
 
@@ -176,13 +255,17 @@ Linux logical topology:
 
 Codec:
   Realtek ALC256 Analog
+  Windows endpoint evidence: VEN_10EC / DEV_0256 / SUBSYS_1D05E004
 
 Windows enhancement:
-  Nahimic / A-Volute (reported OEM stack)
+  Nahimic / A-Volute APO integration: recovered
+  Application EQ preset tables: recovered
+  Selected profile presets: recovered per family
+  Complete active DSP graph / amplifier programming: unresolved
 
 Linux status:
   Functional playback
-  OEM DSP profile not recovered
+  OEM-equivalent processing not recovered
 ```
 
-The next useful evidence is a source-attributed physical inspection or product specification and a recovered Windows endpoint-processing configuration—not an assumed mandatory Linux 4.0 profile. These requirements are tracked in [P14 — physical audio topology and OEM tuning](documentation-status.md#pending-evidence) and [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence).
+The next useful evidence is a source-attributed physical inspection or product specification, plus deeper recovery of Windows endpoint/runtime processing and amplifier-specific state—not an assumed mandatory Linux 4.0 profile. These requirements remain tracked in [documentation status](documentation-status.md#pending-evidence).

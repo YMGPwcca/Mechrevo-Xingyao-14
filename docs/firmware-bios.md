@@ -73,13 +73,13 @@ Size:     0x2000000 bytes / 33,554,432 bytes / 32 MiB
 SHA-256:  77043505b6f42e4a482110a7ba0c7e12ba6b1db28fdaed2743c28578bbf76cd7
 ```
 
-This is the reference parent for the baseline raw-ROM EC carve and raw-ROM FDM offsets. Its bytes were not available for a new whole-image verification during consolidation. The earlier claim that a raw-ROM DXE slice matched an updater slice byte for byte is not promoted to a verified comparison without the source ranges and comparison output.
+This is the reference parent for the baseline raw-ROM EC carve and raw-ROM FDM offsets. The exact private Library object is now located as S16, with the expected 33,554,432-byte size. Raw-byte materialization was unavailable in the recovery audit, so the historical SHA-256 above was not independently recomputed. The earlier claim that a raw-ROM DXE slice matched an updater slice byte for byte is not promoted to a verified comparison without the source ranges and comparison output.
 
 ## EC extraction representations
 
 | Representation | Parent address space | Start | Length | Evidence |
 |---|---|---:|---:|---|
-| Preferred baseline EC image | Raw ROM | `0x081000` | `0x20000` | Retained analysis report and digest |
+| Preferred baseline EC image | Raw ROM | `0x081000` | `0x20000` | Retained analysis report and digest; exact private source object located |
 | Earlier updater EC extraction | Nested `isflash.bin` | `0x268E30` | `0x18000` | Independently repeated extraction; digest matched |
 
 The different lengths are significant. The 98,304-byte updater carve must not silently replace the 128 KiB image used for the baseline banked-EC analysis. The [EC reference](embedded-controller.md) specifies the code and XRAM landmarks associated with the latter.
@@ -126,9 +126,9 @@ The audit identifies `Dynamic LID` / `AmdDynamicLid` at `AMD_PBS_SETUP+0xDF`, wi
 
 ## Runtime visibility and permanent modification
 
-The baseline report records a successful SREP runtime reveal of the suppressed Boot page. A separate permanent SetupUtility suppression candidate was noted near extracted-PE file offset `0x2636A0`, with a proposed `0x46` to `0x47` change. That permanent modification was not flashed or live-tested.
+The baseline report records a successful SREP runtime reveal of the suppressed Boot page. S14 now adds the recovered post-reveal photograph, whose raw bytes are identified in the [source register](research-sources.md#project-sources); the photograph directly shows the expanded Boot page. A separate permanent SetupUtility suppression candidate was noted near extracted-PE file offset `0x2636A0`, with a proposed `0x46` to `0x47` change. That permanent modification was not flashed or live-tested.
 
-These are different experiments. A retained candidate configuration is not automatically the one used by the successful session. [Runtime setup visibility](srep-runtime-reveal.md) records the available evidence without publishing an unverified patch recipe. The exact successful SREP build, configuration association, photograph and digest remain pending P13.
+These are different experiments. Two Quiet-Boot candidate configuration records are recovered, but neither is automatically the configuration used by the successful photographed session. [Runtime setup visibility](srep-runtime-reveal.md) records the available evidence without publishing an unverified patch recipe. The photograph itself is no longer pending; the exact successful SREP executable build, final configuration and session association remain **P13 = NEEDS_CONFIRMATION**.
 
 ## Logo paths and firmware access
 
