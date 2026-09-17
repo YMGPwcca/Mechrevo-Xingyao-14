@@ -4,17 +4,18 @@ This page records unresolved hardware, firmware and behavior questions. It does 
 
 ## Battery charge limit
 
-The `T1=80%`, `T2=100%` pair and its normal-reboot readback are behaviorally recorded. The following remain unresolved:
+The `T1=80%`, `T2=100%` pair and its normal-reboot readback are behaviorally recorded. A later live observation after battery depletion caused complete system power loss found `Enabled=0`, `T1=0`, `T2=0` on the next powered session, so persistence across that recorded event is no longer unresolved. The following remain unresolved:
 
 - Exact user-facing meaning of `T2` / `XRAM[0x0D14]`.
 - Behavior of threshold pairs other than the validated `T1=80%`, `T2=100%` configuration.
 - Exact internal SOC resolution and rounding around the stop/restart boundary.
 - Exact hysteresis width between charging stop and restart.
-- Persistence behavior across a true EC power loss or battery-controller power reset.
-- Storage mechanism responsible for persistence across a normal reboot.
+- The exact transition that cleared the battery-limit fields during the recorded battery-depletion full-power-loss event: depletion/brownout, an EC reset, firmware initialization on the next power-on, or another event-associated transition.
+- Whether other power-loss classes such as battery disconnect, CMOS/RTC-power removal, explicit EC reset, firmware update or other G3 entries produce the same clearing behavior.
+- Storage mechanism responsible for persistence across a normal reboot and loss across the recorded depletion event.
 - Whether the statically identified `0xF1 0x10` reset/disable path has the expected user-facing rollback behavior; its clearing logic is not a live rollback result.
 
-The setter range check establishes an inclusive stored range of decimal `0..100`; it does not establish an arbitrary percentage cap or a complete transport contract.
+The setter range check establishes an inclusive stored range of decimal `0..100`; it does not establish an arbitrary percentage cap or a complete transport contract. See the [battery-depletion power-loss observation](battery-limit-power-loss-observation.md) for the new live capture and its boundaries.
 
 ## Charger and power path
 
