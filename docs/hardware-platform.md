@@ -14,6 +14,7 @@ This reference describes the investigated MECHREVO Xingyao 14 / `P916F-STX` unit
 | Processor topology | 10 cores / 20 threads | Comparative only | Model specification; a 20-worker stress invocation is not independent topology evidence |
 | Integrated graphics | Radeon 880M | Live-confirmed | Platform and Linux observation |
 | Installed memory | 32 GiB | Live-confirmed | Observed configuration of the documented unit |
+| Installed storage | `YMTC PC41Q-1TB-B` | Live-confirmed | Exact-machine Linux boot/device capture; model of the installed SSD, not a universal product specification |
 | Internal display | 2880 × 1800 | Live-confirmed | Display observation; refresh rate and EDID are not retained at equivalent coverage |
 | System firmware | UEFI / Insyde H2O | Static-confirmed | Firmware analysis and recorded environment |
 | System BIOS | `1.15` | Live-confirmed | Firmware UI observation |
@@ -55,7 +56,7 @@ CPU:      AMD Ryzen AI 9 365
 family:   AMD Strix Point / Ryzen AI 300
 cores:    10
 threads:  20
-iGPU:    Radeon 880M
+iGPU:     Radeon 880M
 ```
 
 The integrated Radeon path used the ordinary AMD Linux graphics stack, and Wayland operation was reported on the documented machine. No P916F-specific graphics-firmware replacement or override was established as a requirement. This is not a certification of every graphics API, external output, suspend state or future kernel.
@@ -66,9 +67,19 @@ The retained internal-panel resolution is:
 2880 × 1800
 ```
 
-No refresh-rate value, panel model, EDID digest or adapter rating is published here because the investigation did not retain a correctly identified capture with equivalent evidence quality. These are part of [P15](documentation-status.md#pending-evidence), not values to infer from a related laptop.
+No refresh-rate value, panel model, EDID digest or adapter rating is published here because the investigation did not retain a correctly identified capture with equivalent evidence quality. These remain part of [P15](documentation-status.md#pending-evidence), not values to infer from a related laptop.
 
 The recovered [S11 device capture](research-sources.md#project-sources) includes the ALSA machine string `MECHREVO-XINGYAOSeries-Standard-XINGYAOSeries_P916F_STX`. Linux exposed two V4L2 device entries named FHD Camera, not an independently established two-camera physical layout. Digital and stereo microphone endpoint names are likewise logical interfaces. See [Linux inventory](linux.md#audio-and-peripheral-inventory) and [audio capture](audio.md#recovered-device-and-kernel-capture) for exact observations and PCI driver bindings.
+
+## Installed storage observation
+
+A retained exact-machine Linux boot/device capture identifies the installed storage device as:
+
+```text
+YMTC PC41Q-1TB-B
+```
+
+This is a live inventory observation for the investigated unit. It does not establish the storage configuration shipped with every Xingyao 14 / P916F-STX variant and does not replace a complete NVMe identify dump. Controller firmware revision, namespace details, health state and serial identity are intentionally not inferred from the model string.
 
 ## Internal display
 ### BGRT placement
@@ -119,7 +130,7 @@ FNS1  16-bit field at EC field offset 0x3D
 FTVL   8-bit field at EC field offset 0x3F
 ```
 
-These establish a firmware-visible channel model. They do not independently establish the mechanical fan count, RPM calibration, a complete target-RPM table or a manually controllable fan interface. The thermal method paths and their source boundaries are documented in [`thermal-performance.md`](thermal-performance.md).
+A recovered live capture now correlates GFNS queries with the changing H2RAM values at the two FNS fields. This establishes a firmware-visible, live two-channel telemetry path, but it still does not independently establish mechanical fan count or prove that the raw word is calibrated RPM. The thermal method paths and source boundaries are documented in [`thermal-performance.md`](thermal-performance.md).
 
 ## Battery and adapter
 
@@ -172,7 +183,9 @@ output_FL
 output_FR
 ```
 
-No separate LFE, 2.1 or 4.0 endpoint was observed. Logical FL/FR enumeration does not prove that additional physical drivers are absent or inactive, and it does not independently verify the reported four-driver layout. The Windows OEM stack was reported to use Nahimic / A-Volute processing; the equivalent parameters have not been recovered. See [`audio.md`](audio.md) and [P14 — physical audio topology and OEM tuning](documentation-status.md#pending-evidence).
+No separate LFE, 2.1 or 4.0 endpoint was observed. Logical FL/FR enumeration does not prove that additional physical drivers are absent or inactive, and it does not independently verify the reported four-driver layout.
+
+The recovered S15 Windows archive now establishes Nahimic/A-Volute APO integration on a Realtek `VEN_10EC&DEV_0256&SUBSYS_1D05E004` endpoint and preserves application-level ten-band EQ preset files plus selected preset names. This is stronger than the earlier software-name-only evidence, but it still does not recover the complete active DSP graph, amplifier programming or physical speaker routing. See [`audio.md`](audio.md) and [P14 — physical audio topology and OEM tuning](documentation-status.md#pending-evidence).
 
 ## UEFI / Insyde firmware environment
 
@@ -214,6 +227,7 @@ Thus, for an offset `N` within the declared 256-byte aperture:
 ```text
 host 0xFEEC2300 + N  <->  EC XRAM 0x0300 + N
 ```
+
 This H2RAM aperture is distinct from the conventional ACPI EC I/O interface and from the ITE PMC2 command channel. For example, `XRAM[0x0394]` corresponds to host physical `0xFEEC2394` and is used as an SOC value by the charge-control decision logic. The public [`acpi-wmi.md`](acpi-wmi.md), [`thermal-performance.md`](thermal-performance.md) and [`research-sources.md`](research-sources.md#project-sources) pages preserve the relevant AML method details and source attribution.
 
 ## Platform-family caution
@@ -233,8 +247,8 @@ The following boundaries are deliberate:
 
 | Gate | Current state | Material needed |
 |---|---|---|
-| [P02 — complete ACPI-table identity](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Original complete ACPI table/export header and digest, if available; excerpts do not establish a full-table identity |
-| [P14 — physical audio topology and OEM tuning](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Product specification or physical inspection for driver count, plus recovered OEM tuning evidence if available |
-| [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence) | Partially recovered | S11 records two FHD Camera V4L2 entries, digital/stereo microphones, loaded sound modules and PipeWire server `1.6.7`; storage identifiers, kernel/ALSA/WirePlumber package versions, panel/EDID/refresh and adapter details remain missing |
+| [P02 — complete ACPI-table identity](documentation-status.md#pending-evidence) | `PARTIAL / NEEDS_EVIDENCE` | The September extraction/header capture is recovered; original raw `dsdt.dat` bytes/hash and exact BIOS association remain unresolved |
+| [P14 — physical audio topology and OEM tuning](documentation-status.md#pending-evidence) | `PARTIAL / NEEDS_EVIDENCE` | Nahimic application-level EQ/APO evidence is recovered; physical driver count, complete DSP graph and amplifier programming remain unresolved |
+| [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence) | Partially recovered | S11 records two FHD Camera V4L2 entries, digital/stereo microphones, loaded sound modules and PipeWire server `1.6.7`; an exact-machine capture now adds `YMTC PC41Q-1TB-B`; kernel/ALSA/WirePlumber package versions, panel/EDID/refresh and adapter details remain missing |
 
 No claim above depends on running a firmware writer, issuing an EC setter, or importing hardware data from another machine.
