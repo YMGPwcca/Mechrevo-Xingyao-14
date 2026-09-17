@@ -61,4 +61,6 @@ Protocol bytes use hexadecimal `0x` notation: 80% encodes as `0x50`, not `0x80`;
 
 Vendor executables, raw firmware dumps, EC binaries and proprietary extracted resources are not distributed. The [artifact registry](docs/research-artifacts.md) records available sizes, digests and derivation relationships. A matching digest identifies bytes; it does not certify authenticity, compatibility or safe flashing.
 
+Parts of this documentation were prepared with AI assistance. AI output is not treated as technical evidence; claims remain bounded by the cited primary sources and the repository's evidence classifications. See the [AI-assisted documentation disclosure](NOTICE.md#ai-assisted-documentation) for the full statement.
+
 Original documentation is licensed under [CC BY 4.0](LICENSE). [NOTICE.md](NOTICE.md) defines the third-party boundary. Corrections and evidence contributions should follow [CONTRIBUTING.md](CONTRIBUTING.md).
