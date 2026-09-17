@@ -2,9 +2,11 @@
 
 ## Scope
 
-This page records a new live observation from the investigated MECHREVO Xingyao 14 / `P916F-STX`. The capture was supplied after the machine had fully lost system power because the battery was depleted. The capture does not restate the BIOS or firmware-reported EC revision, so this page does not independently attach a firmware-version identity beyond the investigated unit and the battery-limit interface shown in the output.
+This page records a live persistence observation from the investigated MECHREVO Xingyao 14 / `P916F-STX`. The capture was supplied after the machine had fully lost system power because the battery was depleted. The capture does not restate the BIOS or firmware-reported EC revision, so this page does not independently attach a firmware-version identity beyond the investigated unit and the battery-limit interface shown in the output.
 
 The observation supplements the earlier validation in which `Enabled=1`, `T1=80%`, `T2=100%` survived a normal reboot. It establishes a different outcome after this later battery-depletion power-loss event.
+
+This page is specifically about **persistence**. The later 85/90 experiment separately resolves the live behavioral roles of T1 and T2; see [battery threshold semantics](battery-threshold-semantics.md). The fact that the fields were later observed as `0/0/0` after depletion does not alter those threshold semantics.
 
 ## Raw capture
 
@@ -50,4 +52,6 @@ This observation establishes behavior, not the persistence mechanism. It does no
 
 It also does not establish that every G3 transition, battery disconnect, CMOS/RTC-power removal, explicit EC reset, firmware update, or other power-loss class produces the same result. No claim is made that the threshold fields are necessarily stored only in volatile SRAM.
 
-Operationally, the result means the charge-limit state must not be assumed to remain enabled after a battery-depletion event that fully powers the machine off. A state readback is required before relying on the limit after such an event.
+The observation is complete-system-power-loss evidence, not direct instrumentation of the EC power rail. Therefore it does not by itself prove a specific complete-EC-power-domain-loss mechanism.
+
+Operationally, the result means the charge-limit state must not be assumed to remain enabled after a battery-depletion event that fully powers the machine off. A state readback is required before relying on the limit after such an event. A persistent Linux implementation should restore the desired policy only when readback shows that state has been cleared or changed; see [battery charge-limit protocol](battery-charge-limit.md#persistence).
