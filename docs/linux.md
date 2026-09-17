@@ -1,6 +1,6 @@
 # Linux platform integration
 
-This reference records Linux-visible interfaces and platform behavior for the investigated MECHREVO Xingyao 14 / `P916F-STX`. It covers hardware/firmware integration, not desktop-environment configuration or a shipped driver. The principal live records are from CachyOS / an Arch-family installation on the documented unit; an Ubuntu live environment was used for an audio comparison. Device-availability statements are scoped to those recorded environments, not to every kernel or distribution. Sources are [S1 / `SRC-BASELINE`](research-sources.md#project-sources), the identified ACPI excerpts [`SRC-AML-A`](research-sources.md#project-sources), [`SRC-AML-B`](research-sources.md#project-sources), [`SRC-AML-C`](research-sources.md#project-sources) and [`SRC-AML-D`](research-sources.md#project-sources), and the general Linux interface definitions in [E1](research-sources.md#external-interface-and-licensing-references).
+This reference records Linux-visible interfaces and platform behavior for the investigated MECHREVO Xingyao 14 / `P916F-STX`. It covers hardware/firmware integration, not desktop-environment configuration or a shipped driver. The principal live records are from CachyOS / an Arch-family installation on the documented unit; an Ubuntu live environment was used for an audio comparison. Device-availability statements are scoped to those recorded environments, not to every kernel or distribution. Sources are [S1 / `SRC-BASELINE`](research-sources.md#project-sources), the identified ACPI excerpts [`SRC-AML-A`](research-sources.md#project-sources), [`SRC-AML-B`](research-sources.md#project-sources), [`SRC-AML-C`](research-sources.md#project-sources) and [`SRC-AML-D`](research-sources.md#project-sources), the later battery captures [S18](research-sources.md#project-sources) and [S19](research-sources.md#project-sources), and the general Linux interface definitions in [E1](research-sources.md#external-interface-and-licensing-references).
 
 Source S11 records PipeWire server `1.6.7` and a loaded audio-module inventory. Exact kernel, ALSA and installed WirePlumber package versions remain unestablished; the version displayed beside a PipeWire client is not independently a package-version query. See [P15](documentation-status.md#pending-evidence).
 
@@ -89,7 +89,9 @@ The S3 Huawei-WMI search output lists driver bind/unbind/uevent, driver override
 
 ## Firmware charge control
 
-The machine-specific charge limiter was instead reached through the ITE PMC2 transport. The retained validated state was:
+The machine-specific charge limiter is reached through the ITE PMC2 transport rather than the generic Linux threshold ABI.
+
+The earlier known-good state was:
 
 ```text
 state = 1
@@ -97,24 +99,54 @@ T1    = 80
 T2    = 100
 ```
 
-With this pair, Linux recorded charging below the configured region and a transition to `Not charging` around displayed 79–80%. Stable capped samples reported `power_now=0`, and the state and thresholds were read back after a normal reboot. Only this pair has been behaviorally validated; the exact user-facing role of `T2`, the hysteresis width and the behavior of other threshold pairs remain unresolved. The command framing, field map, response handling and retained raw results are documented in [`battery-charge-limit.md`](battery-charge-limit.md).
+With that pair, Linux recorded charging below the configured region and a transition to `Not charging` around displayed 79–80%. The state and thresholds survived a normal reboot. A later complete-battery-depletion event returned `0/0/0` on the next powered session, so software must not assume that the state is permanent across deep power-loss events.
 
-### Energy observation and timing
-
-The high-load observation ran with AC connected and retained these snapshots:
+A later `T1=85`, `T2=90` experiment isolated both threshold roles and directly demonstrated three behavioral regions:
 
 ```text
-20:47:14  cap=79%  status=Not charging  power=0       energy=63154000
+SOC < T1
+    -> Charging
+
+T1 <= SOC <= T2
+    -> Hold / Not charging
+
+SOC > T2
+    -> Active battery discharge while AC remains online
+```
+
+Above T2, the battery supplied sustained multi-watt power and `energy_now` decreased despite `ACAD/online=1`. As the battery returned to the T2 region, the sustained discharge fell away and the machine settled into `Not charging / power_now=0`.
+
+The transition near programmed T1=85 occurred while Linux still displayed 84%, and substantial T2 discharge continued for part of the period while Linux displayed 90%. These observations show why Linux's integer `capacity` must not be treated as a cycle-synchronous view of the EC comparator input. The exact fractional/internal SOC and update cadence remain unresolved.
+
+The earlier 80/100 policy is now explained as a practical charge cap: because `SOC > 100` is effectively unreachable during normal operation, the T2 active-discharge region is effectively excluded and T1 becomes the practical cap boundary.
+
+Detailed command framing, state fields, boundary traces and evidence limits are documented in [`battery-charge-limit.md`](battery-charge-limit.md) and [`battery-threshold-semantics.md`](battery-threshold-semantics.md).
+
+### Energy observations and timing
+
+The earlier high-load observation ran with AC connected and retained these snapshots:
+
+```text
+20:47:14  cap=79%  status=Not charging  power=0        energy=63154000
 20:52:27  cap=78%  status=Charging      power=28128000 energy=62661000
 ```
 
-The reported energy decrease is:
+The reported energy decrease was:
 
 ```text
 (63154000 - 62661000) µWh = 493000 µWh = 0.493 Wh
 ```
 
-The timestamped snapshots span 313 seconds. The `stress-ng` record reports a five-minute run, i.e. 300 seconds of configured stressor runtime. These are different intervals and must not be substituted for one another in an average-power calculation. The result supports net battery-energy contribution during the observation and is consistent with battery-assist behavior; it does not establish adapter wattage, instantaneous adapter draw or the complete charger topology.
+The timestamped snapshots span 313 seconds. The `stress-ng` record reports a five-minute run, i.e. 300 seconds of configured stressor runtime. These are different intervals and must not be substituted for one another in an average-power calculation.
+
+The later isolated T2 trace is stronger evidence for intentional active discharge. It moved from approximately:
+
+```text
+68.116 Wh -> 64.972 Wh
+Delta     = 3.144 Wh
+```
+
+over approximately 18 minutes 57 seconds while AC remained online. Using those endpoints gives an approximate average net battery contribution of about 9.95 W. Workload varied, telemetry is quantized and wall-side adapter power was not measured, so the calculated average is not a calibrated electrical measurement. The important fact is that several watt-hours of stored battery energy were lost while AC stayed online.
 
 The stress invocation selected 20 CPU workers. That workload setting is not independent evidence of the processor's physical/logical topology; the canonical processor identity and topology boundary are documented in [`hardware-platform.md`](hardware-platform.md).
 
@@ -260,7 +292,9 @@ No retained sysfs inspection establishes whether this unit exposes the Linux `pl
 
 ## Integration boundary
 
-The recovered evidence is sufficient to document PMC2 ports, command framing, enable state, threshold getters/setters and the behaviorally validated 80%/100% pair. It does not define a production Linux driver contract. A native implementation would still require explicit platform/revision matching, transport ownership, response/error handling and user-facing semantics. This repository documents the interfaces and evidence rather than shipping a driver.
+The recovered evidence is sufficient to document PMC2 ports, command framing, enable state, threshold getters/setters, normal-reboot persistence, the recorded depletion-state reset, and the three-region behavior isolated by the 85/90 experiment. It does not define a production Linux driver contract.
+
+A persistent implementation should be **state-verifying and idempotent**: read `Enabled/T1/T2`, perform no writes if they already match the desired policy, and restore them only when the state has reset or differs. That strategy follows from the observed persistence behavior, but a production implementation would still require explicit platform/revision matching, transport ownership, bounded timeouts, response/error handling, concurrency rules and a deliberate user-facing policy. The static `0xF1 0x10` reset command is not required for ordinary restoration and remains untested live.
 
 ## Pending evidence gates
 
@@ -270,5 +304,5 @@ The recovered evidence is sufficient to document PMC2 ports, command framing, en
 | [P08 — PSP protection/version fields](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Original multi-attribute PSP/ROM Armor capture; do not infer fields from `rom_armor_enforced=1` |
 | [P10 — protected-region map and DXE equality](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Original `-pq`/comparison records or both identified source byte ranges and comparison output |
 | [P14 — physical audio topology and OEM tuning](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Product specification/inspection and recovered OEM processing evidence |
-| [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence) | Partially recovered | S11 supplies camera/microphone/module names and PipeWire server version; kernel/ALSA/WirePlumber package versions, storage identifiers and panel/adapter details remain missing |
+| [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence) | Partially recovered | S11 supplies camera/microphone/module names and PipeWire server version; exact-machine storage model is recovered as `YMTC PC41Q-1TB-B`; kernel/ALSA/WirePlumber package versions, panel/EDID/refresh and adapter details remain missing |
 | [T34 / platform profile portability](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Identified `platform_profile` sysfs inspection on this unit and kernel |

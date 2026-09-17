@@ -120,7 +120,7 @@ DATA            = 0x68
 COMMAND/STATUS  = 0x6C
 ```
 
-This PMC2 transport is central to the documented battery charge-limit work. The preferred raw-ROM EC carve, bank/address qualifications, H2RAM mapping and code landmarks are maintained in [`embedded-controller.md`](embedded-controller.md); threshold behavior and the retained transaction results are in [`battery-charge-limit.md`](battery-charge-limit.md).
+This PMC2 transport is central to the documented battery charge-limit work. The preferred raw-ROM EC carve, bank/address qualifications, H2RAM mapping and code landmarks are maintained in [`embedded-controller.md`](embedded-controller.md); threshold behavior and the retained transaction results are in [`battery-charge-limit.md`](battery-charge-limit.md) and [`battery-threshold-semantics.md`](battery-threshold-semantics.md).
 
 Recovered AML also defines two 16-bit fan-telemetry fields and one profile field:
 
@@ -166,7 +166,7 @@ charge_control_end_threshold
 charge_behaviour
 ```
 
-The firmware nevertheless contains a charge-limit subsystem reached through the EC PMC2 command family. Only the enabled `T1=80%`, `T2=100%` pair has been behaviorally validated; the exact user-facing meaning of `T2` and the behavior of other pairs remain open. See [`linux.md`](linux.md) and [`battery-charge-limit.md`](battery-charge-limit.md).
+The firmware nevertheless contains a charge-limit subsystem reached through the EC PMC2 command family. The behavioral meaning of both thresholds is now established on the investigated unit: T1 is the lower charge/hold boundary, while T2 is the upper boundary of an active-discharge region. In the validated 85/90 experiment, the machine charged below T1, held between the thresholds, and discharged the battery at multi-watt power above T2 despite AC remaining online. Returning to the T2 region released the sustained discharge. The earlier 80/100 configuration is now understood as a practical charge-cap policy whose `SOC > 100` active-discharge region is effectively unreachable. Behavior for arbitrary threshold pairs, exact comparator timing and the exact charger silicon remain unresolved. See [`linux.md`](linux.md), [`battery-charge-limit.md`](battery-charge-limit.md) and [`battery-threshold-semantics.md`](battery-threshold-semantics.md).
 
 ## Audio hardware
 
@@ -251,4 +251,4 @@ The following boundaries are deliberate:
 | [P14 — physical audio topology and OEM tuning](documentation-status.md#pending-evidence) | `PARTIAL / NEEDS_EVIDENCE` | Nahimic application-level EQ/APO evidence is recovered; physical driver count, complete DSP graph and amplifier programming remain unresolved |
 | [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence) | Partially recovered | S11 records two FHD Camera V4L2 entries, digital/stereo microphones, loaded sound modules and PipeWire server `1.6.7`; an exact-machine capture now adds `YMTC PC41Q-1TB-B`; kernel/ALSA/WirePlumber package versions, panel/EDID/refresh and adapter details remain missing |
 
-No claim above depends on running a firmware writer, issuing an EC setter, or importing hardware data from another machine.
+No claim above depends on running a firmware writer or importing hardware data from another machine. The battery setter operations discussed here are historical live evidence already recorded on the documented unit; this revision does not imply that additional hardware writes were performed during documentation editing.
