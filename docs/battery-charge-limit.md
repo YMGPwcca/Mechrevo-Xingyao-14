@@ -2,7 +2,7 @@
 
 ## Scope and validated behavior
 
-This page documents the firmware-level battery charge-limit subsystem identified in the `P916F-STX` IT5571 EC and exercised through the live ITE PMC2 host interface. The machine-specific historical findings are retained from `SRC-BASELINE` (stable source crosswalk [S1](research-sources.md#project-sources)); the raw validation record is in [validation](validation.md). The exact EC carve and its address-space limits are listed in the [artifact registry](research-artifacts.md#current-raw-32-mib-rom).
+This page documents the firmware-level battery charge-limit subsystem identified in the `P916F-STX` IT5571 EC and exercised through the live ITE PMC2 host interface. The machine-specific historical findings are retained from `SRC-BASELINE` (stable source crosswalk [S1](research-sources.md#project-sources)); the raw validation record is in [validation](validation.md). A later owner-supplied live capture is registered as [S18](research-sources.md#project-sources) and records the post-depletion power-loss state. The exact EC carve and its address-space limits are listed in the [artifact registry](research-artifacts.md#current-raw-32-mib-rom).
 
 The recorded live configuration was:
 
@@ -12,7 +12,7 @@ T1=80%
 T2=100%
 ```
 
-With that exact pair, charging stopped near the displayed 79–80% boundary, resumed below that region and retained the configuration across a normal reboot. The recorded reboot result did not require Windows Control Center to keep the state. These results apply to the investigated BIOS/EC baseline, not to arbitrary threshold pairs or other models. The stock battery device in the recorded Linux environment did not expose `charge_control_start_threshold`, `charge_control_end_threshold` or `charge_behaviour`; the firmware command path nevertheless worked.
+With that exact pair, charging stopped near the displayed 79–80% boundary, resumed below that region and retained the configuration across a normal reboot. The recorded reboot result did not require Windows Control Center to keep the state. A later live observation after battery depletion caused complete system power loss found `Enabled=0`, `T1=0`, `T2=0` on the next powered session. This establishes that the earlier configured state did not survive that recorded event; it does not establish the exact clearing mechanism or behavior for every G3, battery-disconnect or EC-reset class. These results apply to the investigated P916F-STX unit and their stated capture scope, not to arbitrary threshold pairs or other models. The stock battery device in the recorded Linux environment did not expose `charge_control_start_threshold`, `charge_control_end_threshold` or `charge_behaviour`; the firmware command path nevertheless worked.
 
 The firmware range check accepts numeric values from 0 through 100 inclusive. Only the `T1=80%`, `T2=100%` pair has been behaviorally validated. The range check must not be turned into an unqualified claim that every arbitrary pair has known charging semantics.
 
@@ -228,7 +228,23 @@ T1    = 80
 T2    = 100
 ```
 
-The configuration therefore survived a normal reboot. Persistence across a true EC power loss/reset, battery disconnect or removal of the battery-controller power domain remains unestablished.
+The configuration therefore survived a normal reboot.
+
+### 7. State after battery-depletion full power loss
+
+A later observation was recorded after battery depletion caused complete system power loss. On the next powered session, the battery-limit query returned:
+
+```text
+Enabled : 0 (OFF)
+T1      : 0% (0x00)
+T2      : 0% (0x00)
+```
+
+At the same time, AC was online, SOC was 89%, and the battery reported `Charging` with `Power=21137000`, `Energy=64350000` and `Voltage=13431000` in the same capture. The complete raw text is preserved in [validation](validation.md#battery-depletion-full-power-loss-observation) and the standalone [power-loss observation](battery-limit-power-loss-observation.md).
+
+This is **Live-confirmed** evidence that the earlier `1 / 80 / 100` state did not survive this recorded battery-depletion full-power-loss event. It does not prove when or why the values were cleared, whether the static `0xF1 0x10` handler ran, whether the fields are stored only in volatile memory, or whether every G3, battery-disconnect, CMOS/RTC-power removal, firmware-update or EC-reset condition behaves identically.
+
+The practical boundary is direct: after battery depletion fully powers the machine off, the charge-limit state should be read back before relying on it.
 
 ## Threshold semantics
 
@@ -335,11 +351,11 @@ XRAM[0x0D13]
 XRAM[0x0D14]
 ```
 
-This path is **static-confirmed only**. It was not exercised live in the documented validation sequence because the known-good `80%/100%` state was intentionally left enabled. It must not be described as a tested rollback or as a verified restoration of every factory charging parameter.
+This path is **static-confirmed only**. It was not exercised live in the documented validation sequence because the known-good `80%/100%` state was intentionally left enabled. The post-depletion `0 / 0 / 0` observation does not prove that this handler executed. The path must not be described as a tested rollback or as a verified restoration of every factory charging parameter.
 
-## Current known-good state and remaining questions
+## Current known-good state and persistence boundary
 
-At the end of the experiment and again after reboot:
+The configured state that was behaviorally validated and that survived a normal reboot was:
 
 ```text
 state = 1
@@ -347,4 +363,6 @@ T1    = 80
 T2    = 100
 ```
 
-This exact state is the only threshold pair behaviorally validated in the retained record and is the strongest known-good reference point for future work. Remaining technical questions are tracked in [open technical questions](open-questions.md#battery-charge-limit), including T2 semantics, internal SOC resolution and reset persistence. No manual EC writer or production transport recipe is published here.
+This exact state remains the only threshold pair behaviorally validated in the retained record and the strongest known-good configured reference point for future work. Persistence is now separately bounded: a normal reboot retained `1 / 80 / 100`, while the later battery-depletion full-power-loss event was followed by `0 / 0 / 0`.
+
+Remaining technical questions are tracked in [open technical questions](open-questions.md#battery-charge-limit), including T2 semantics, internal SOC resolution, the exact clearing mechanism and behavior under other reset/power-loss classes. No manual EC writer or production transport recipe is published here.
