@@ -2,7 +2,9 @@
 
 ## Scope and source coverage
 
-This page describes the `P916F-STX` embedded controller, its host-visible windows and the static charge-control landmarks recovered from the investigated firmware. Machine-specific live results and the historical traces are retained from `SRC-BASELINE` ([S1](research-sources.md#project-sources)); the ACPI field and method excerpts are selected source material identified as `SRC-AML-A` through `SRC-AML-D` ([S3](research-sources.md#project-sources), [S4](research-sources.md#project-sources), [S5](research-sources.md#project-sources)). The independently measured package and carve metadata is `SRC-BINARIES`/`SRC-SFX` ([S9](research-sources.md#project-sources)); artifact identity and extraction coverage are recorded in [research artifacts](research-artifacts.md#current-raw-32-mib-rom). A source excerpt or artifact identity establishes a static property; it does not by itself establish a live setter or a safe write procedure.
+This page describes the `P916F-STX` embedded controller, its host-visible windows and the static charge-control landmarks recovered from the investigated firmware. Machine-specific historical results are retained from `SRC-BASELINE` ([S1](research-sources.md#project-sources)); the later battery-depletion and 85/90 semantic-isolation observations are [S18](research-sources.md#project-sources) and [S19](research-sources.md#project-sources). The ACPI field and method excerpts are selected source material identified as `SRC-AML-A` through `SRC-AML-D` ([S3](research-sources.md#project-sources), [S4](research-sources.md#project-sources), [S5](research-sources.md#project-sources)). The independently measured package and carve metadata is `SRC-BINARIES`/`SRC-SFX` ([S9](research-sources.md#project-sources)); artifact identity and extraction coverage are recorded in [research artifacts](research-artifacts.md#current-raw-32-mib-rom).
+
+A source excerpt or artifact identity establishes a static property; it does not by itself establish a live setter or a safe write procedure. Conversely, live behavioral semantics do not automatically identify the exact charger silicon or electrical implementation.
 
 ## Silicon and host interfaces
 
@@ -121,6 +123,8 @@ as a battery-percentage/SOC value in charge-control comparisons. Because `0x0394
 
 A live `/dev/mem` read at that address returned a normal battery percentage value, for example `92` during one later cross-check, rather than the `0xFF` observed through the rejected I2EC hypothesis.
 
+Linux `capacity` and this EC decision input are related observations but are not established to update synchronously. The later T1/T2 validation deliberately avoids treating a displayed integer percentage as the exact EC comparator instant.
+
 ## ACPI field map
 
 Offsets below are within the documented EC/H2RAM field window. Multi-byte names retain the AML spelling; meanings should be derived from their consumers rather than guessed solely from abbreviations.
@@ -161,8 +165,8 @@ The dedicated battery-limit state is:
 
 ```text
 XRAM[0x0D01].bit4   enable/state bit
-XRAM[0x0D13]        threshold value 1
-XRAM[0x0D14]        threshold value 2
+XRAM[0x0D13]        threshold value 1 / T1
+XRAM[0x0D14]        threshold value 2 / T2
 XRAM[0x0394]        live SOC used by the decision logic
 ```
 
@@ -184,8 +188,22 @@ CODE:0xE65D         recorded PMC2 data-out helper landmark
 
 The public command protocol that reaches this family is documented in [battery-charge-limit.md](battery-charge-limit.md).
 
-The `CODE:0xF508` disable/reset association is static-confirmed only; the corresponding live reset operation was not exercised. The setter landmarks have static range checks, while live validation is limited to the recorded `T1=80%`, `T2=100%` setter/readback sequence described in [battery-charge-limit.md](battery-charge-limit.md).
+The `CODE:0xF508` disable/reset association is static-confirmed only; the corresponding live reset operation was not exercised. The later post-depletion `0/0/0` observation does not prove that this handler ran.
 
+Live setter/readback validation now includes both the original `T1=80%`, `T2=100%` state and the later `T1=85%`, `T2=90%` state. The 85/90 experiment additionally establishes the high-level behavioral meaning of the fields:
+
+```text
+SOC < T1
+    -> Charging
+
+T1 <= SOC <= T2
+    -> Hold / Not charging
+
+SOC > T2
+    -> Active battery discharge with AC online
+```
+
+Thus T1 is the lower charge/hold boundary and T2 is the upper active-discharge boundary on the investigated unit. These behavioral semantics are live evidence and are separate from the lower-level charger implementation.
 
 ### Threshold validation logic
 
@@ -203,7 +221,9 @@ SUBB A,#0x64
 JNC invalid
 ```
 
-On the 8051, `SUBB` computes `A - operand - C`. Because the second comparison deliberately sets carry first, a value of exactly 100 still produces a borrow and remains valid, while 101 does not and is rejected. The firmware therefore accepts the inclusive decimal range 0 through 100, encoded as `0x00` through `0x64`. This does not prove how every possible threshold pair maps to user-facing charging behavior.
+On the 8051, `SUBB` computes `A - operand - C`. Because the second comparison deliberately sets carry first, a value of exactly 100 still produces a borrow and remains valid, while 101 does not and is rejected. The firmware therefore accepts the inclusive decimal range 0 through 100, encoded as `0x00` through `0x64`.
+
+The static range check does not prove how every possible threshold pair behaves. S19 establishes the three-region behavior for the tested 85/90 policy and explains the earlier 80/100 behavior; `T1 == T2`, reversed thresholds and arbitrary-pair equivalence remain unestablished.
 
 ### Charger-control working values
 
@@ -214,7 +234,11 @@ XRAM[0x0D54..0x0D57]
 XRAM[0x0D65..0x0D68]
 ```
 
-Helpers around `CODE:0xC249` and `CODE:0xC27A` clear or copy these values depending on the SOC/threshold branch taken. A later worker stages charger transactions associated with command numbers `0x14` and `0x15`. Those numbers are consistent with common Smart Battery charger `ChargingCurrent` / `ChargingVoltage` conventions, but the exact semantic naming remains inferred until the complete transaction path is decoded end to end. These words must not be presented as a complete electrical power-path model.
+Helpers around `CODE:0xC249` and `CODE:0xC27A` clear or copy these values depending on the SOC/threshold branch taken. A later worker stages charger transactions associated with command numbers `0x14` and `0x15`. Those numbers are consistent with common Smart Battery charger `ChargingCurrent` / `ChargingVoltage` conventions, but the exact semantic naming remains inferred until the complete transaction path is decoded end to end.
+
+A downstream transaction in the T2-related secondary branch also modifies bit 5 of charger register `0x12`. The observed register contract is compatible with the TI BQ25700A/BQ25710 family and an `EN_LEARN`-like discharge-oriented control function. This is a **family-level static-supported interpretation**, not an exact charger-silicon identification or proof of the vendor register name on this machine.
+
+The distinction matters because the high-level result no longer depends on that inference: S19 independently records sustained multi-watt battery discharge and a multi-watt-hour energy decrease above T2 while AC remains online.
 
 ## PMC2 host transport
 
@@ -234,6 +258,8 @@ The recorded host sequence was:
 5. For a returning command, wait for `OBF=1` and read `0x68`.
 
 The complete timeout, stale-output, error and transaction-ownership contract was not retained. A known command path must not be replaced with an unrestricted raw-memory write.
+
+The validated command family and threshold byte encoding are maintained in [battery-charge-limit.md](battery-charge-limit.md); the three-region live behavior is in [battery-threshold-semantics.md](battery-threshold-semantics.md).
 
 ## Thermal-profile interface boundary
 
@@ -279,5 +305,7 @@ The cross-check therefore failed decisively. The static initialization also writ
 - Do not copy `0x07B9`, `0x07D0` or other generic Uniwill/Tongfang offsets onto this machine merely because the EC family is similar.
 - Do not equate a logical query with an absence of bus writes: selecting a register or submitting a getter can still write address/command ports.
 - Prefer the exact firmware-defined PMC2 command path when a known command exists.
+- Do not identify the charger as BQ25700A/BQ25710 solely from register compatibility.
+- Do not treat the historical 85/90 experiment as proof that every arbitrary threshold pair is a safe or equivalent policy.
 
-The charge-limit work demonstrates why: generic Windows software contained familiar old offsets, but the actual P916F-STX firmware exposes a distinct command-controlled subsystem at `0x0D13`/`0x0D14`.
+The charge-limit work demonstrates why: generic Windows software contained familiar old offsets, but the actual P916F-STX firmware exposes a distinct command-controlled subsystem at `0x0D13`/`0x0D14`. The live 85/90 experiment resolves the high-level meaning of those two fields without erasing the remaining uncertainty about the exact charger and electrical power-path implementation.
