@@ -10,17 +10,23 @@ Each record uses the following fields where they carry information: artifact ID,
 
 Measured package records below come from `inventory/mounted_artifacts.json` (`SRC-BINARIES`). SFX member and extraction records come from `inventory/sfx_inspection.json` (`SRC-SFX`). Both are offline byte measurements, not hardware tests. A `historical` record preserves a baseline report identity; it is not presented as a new rehash.
 
-### Recovered text-source identities
+### Recovered source identities
 
-These are offline measurements of supplied source exports, not firmware artifacts. Their source text is curated into the linked technical pages; original private reports and shell transcripts are not distributed wholesale. The extraction chain is `MECHREVO_PR2_SOURCE_RECOVERY.zip` → `mechrevo_pr2_sources/` → filename below; archive-member position is not a firmware offset.
+These are offline measurements of supplied source exports or recovered Project/Library records, not firmware compatibility claims. Their source text is curated into the linked technical pages; original private reports and shell transcripts are not distributed wholesale.
 
 | Source / filename | Representation and size | SHA-256 | Coverage / use |
 |---|---|---|---|
 | S2 · `P916F-STX_BIOS_1.15_full_option_audit.md` | Authorized raw file export; 140821 bytes, 859 lines | `525c46baa22a0d868b56c36d4094cc13f314bdfccba239f4332c3159983e5271` | Full static audit; every inventory row in [setup reference](bios-setup-options.md) |
 | S3 · `Pasted text(4).txt` | Project text extraction; 33532 bytes, 938 logical text lines (937 LF terminators; no final newline) | `fd33e0fc94a69c558156ae82e124a213f891627daa788fc65d84e03c0d73cc16` | Full extracted text, not original raw-byte identity or complete DSDT; complete [THMM](thermal-performance.md#thmm-conditional-alib-parameter-sequence) and selected technical excerpts |
+| S6 · `Pasted text(16).txt` | Recovered raw text file; 7465 bytes | `21d40ec647d5859a2b6feb19ec206dd296eaba45666d7d3e8bc4b17da5966d34` | Historical April `SPFM` map with `ECMD(0x91)` / `ECMD(0x92)` |
+| S6 · `dsdt.dsl` | Recovered complete historical disassembly; 253103 bytes | `43f4b40e70ac867416b9137e3d41ae12ead76224038dcfb6a4943bfc41466296` | Complete historical DSDT text with the same `0x91` / `0x92` map; exact same-session firmware association remains unresolved |
 | S11 · `Pasted text(71).txt` | Authorized raw file export; 12706 bytes, 210 logical text lines (209 LF terminators; no final newline) | `994d5a0b7df61bccec35d1ef6bb7a7818aa6e9ec33dbef430a5b6307ac1ee0a0` | Full device/audio capture examined; curated [audio](audio.md#recovered-device-and-kernel-capture) and [Linux inventory](linux.md#audio-and-peripheral-inventory) |
+| S12 · `Pasted text(3).txt` | Project text representation; 15627 bytes | `08cbb63b25f81ad1c2e3523094c91800130e5106a22e6d612f978eb465616b65` | ACPI extraction command/output and DSDT header; not raw `dsdt.dat` bytes |
+| S13 · `Pasted text(7).txt` | Project text representation; 12085 bytes | `4492ee79f2f7eb142e50fa6f0f2c83d025a0ce31a205a7f6724777044c5e1842` | Live H2RAM/GFNS correlation capture; raw words are not independently calibrated RPM |
+| S14 · `SREP_Config_P916F-STX_1.15_QuietBoot.cfg` | Project text representation; 152 bytes | `b7359ed2189796efbfff6be5e82c0d7ba7ba969fcef9156366b25949919297ef` | Candidate runtime SetupUtility suppression patch; not associated conclusively with the successful photographed session |
+| S14 · `SREP_Config_P916F-STX_1.15_QuietBoot_v2.cfg` | Project text representation; 158 bytes | `8a56d7d2c89cb5fa48a49669e18f75797cfebef72f95e64fee40bf6ffafac022` | Second candidate using a different patch operation; not promoted to known-good |
 
-Exact File IDs and classification limits are in the [source register](research-sources.md#project-sources). A checked text-export hash establishes byte identity of that representation only; it does not independently validate the source analyst's interpretation or certify hardware behavior. The `xingyao.fw` filename appears in S11 but its bytes, size, digest and origin are not recovered.
+Exact File IDs and classification limits are in the [source register](research-sources.md#project-sources). A checked source hash establishes byte identity of that representation only; it does not independently validate the source analyst's interpretation or certify hardware behavior. The `xingyao.fw` filename appears in S11 but its bytes, size, digest and origin are not recovered.
 
 ## Baseline machine-specific artifacts
 
@@ -28,12 +34,12 @@ The following records preserve the baseline identities and landmarks. Their sour
 
 ### Current raw 32 MiB ROM
 
-The current image and preferred EC carve are the first two records in the baseline registry.
+The current image and preferred EC carve are the first two records in the baseline registry. Their exact private Library objects are now located, correcting the earlier wording that the source objects themselves were not retained. Raw-byte materialization was unavailable in this audit, so the historical digests below were not recomputed.
 
 | Artifact ID | Canonical filename | Type / size | SHA-256 | Parent, member path or range | Address-space relevance | Evidence class / source coverage | Availability | Use or boundary |
 |---|---|---|---|---|---|---|---|---|
-| `ROM-P916F-CURRENT` | `P916F-STX-current-ROM.bin` | Raw 32 MiB firmware image; `33,554,432` bytes / `0x2000000` | `77043505b6f42e4a482110a7ba0c7e12ba6b1db28fdaed2743c28578bbf76cd7` | none | raw-ROM file offsets | Artifact-confirmed (historical); retained baseline identity, original bytes not rehashed in this record | Not distributed; original bytes not retained | Preferred parent for machine-specific static claims; EC carve at `0x081000` |
-| `EC-P916F-IT5571-109` | `P916F-IT5571-EC-1.09.bin` | EC image; `0x20000` bytes / 128 KiB | `42c117f00c130c5e533be93ee1657401ac4d687255ed1b2250f74d3cc79397ea` | `ROM-P916F-CURRENT + 0x081000`, length `0x20000` | raw-ROM carve; child digest is distinct from parent | Artifact-confirmed (historical); retained baseline identity | Not distributed | Preferred EC image for detailed battery analysis; second bank is sparse but real code/data |
+| `ROM-P916F-CURRENT` | `P916F-STX-current-ROM.bin` | Raw 32 MiB firmware image; `33,554,432` bytes / `0x2000000` | `77043505b6f42e4a482110a7ba0c7e12ba6b1db28fdaed2743c28578bbf76cd7` | none | raw-ROM file offsets | Artifact-confirmed (historical); exact Library object located as S16, historical digest not rehashed in this audit | Private Library object `file_00000000004c8206847bb2992bb1feaa`; not distributed; raw-byte materialization unavailable in current audit | Preferred parent for machine-specific static claims; EC carve at `0x081000` |
+| `EC-P916F-IT5571-109` | `P916F-IT5571-EC-1.09.bin` | EC image; `0x20000` bytes / 128 KiB | `42c117f00c130c5e533be93ee1657401ac4d687255ed1b2250f74d3cc79397ea` | `ROM-P916F-CURRENT + 0x081000`, length `0x20000` | raw-ROM carve; child digest is distinct from parent | Artifact-confirmed (historical); exact Library object located as S16, historical digest not rehashed in this audit | Private Library object `file_00000000da5882069264633b870b5570`; not distributed; raw-byte materialization unavailable in current audit | Preferred EC image for detailed battery analysis; second bank is sparse but real code/data |
 
 ### Other baseline identities
 
@@ -42,7 +48,7 @@ The current image and preferred EC carve are the first two records in the baseli
 | `UPDATER-OUTER-115` | `STX_SKU2_1.15.zip` | Outer vendor archive; size not retained | not retained | outer archive; contains `STX_SKU2_1.15.exe` | archive/container namespace | Not established; filename and nesting retained in baseline | Not retained | Do not substitute the EXE digest for this outer ZIP |
 | `EC-UPDATER-CARVE-18000` | `STX_SKU2_1.15.exe -> isflash.bin` EC carve | Earlier updater EC-like extraction; `0x18000` bytes / 98,304 bytes | `030ec5da8b5f027d2461af98b92416eab4a526734bee4b3032e5d9042d016023` | `isflash.bin + 0x268E30`, length `0x18000` | updater-image offset inside `isflash.bin`, not raw-ROM | Artifact-confirmed (historical; independently repeated in measured SFX record below); retained report | Not distributed | Contains `ITE EC-V14.6`, `IT557x V1.09 E00 - 20230831`, `MECHREVO`, `VER:01.0F.00`; not interchangeable with the 128 KiB raw-ROM carve |
 | `PKG-CC-GX-HISTORICAL` | `ControlCenter_5.56.1.13_Mechrevo_GX.zip` | GX Control Center package; size not retained in baseline | `d081d2b338068ca6fd1099be2f6762d522c1223796f20a800d47034842423449` | outer package; historical useful paths listed in baseline | archive/container namespace | Artifact-confirmed (historical report); package member sizes/digests were not retained in baseline | Not distributed | Generic OEM software evidence; not proof of P916F runtime support |
-| `BUNDLE-CHARGE-REVERSE` | `P916F-charge-reverse.tar.gz` | Compact service/component bundle; size not retained | not retained | outer bundle; members included `ACPIDriverDll.dll`, `GCUService.exe`, `service.ini` | archive/container namespace | Not established at bundle level; individual historical child identities retained | Not retained | Bundle digest must not be replaced by a child digest; no `ACPIDriver.sys` was present in the retained extraction |
+| `BUNDLE-CHARGE-REVERSE` | `P916F-charge-reverse.tar.gz` | Compact service/component bundle; exact located object size `10,092,171` bytes | not retained | outer bundle; members included `ACPIDriverDll.dll`, `GCUService.exe`, `service.ini` | archive/container namespace | Source-located at bundle level; individual historical child identities retained; parent digest not rehashed | Private Library object `file_0000000099ac8209b2e8bf87fb8aec70`; not distributed; raw-byte materialization unavailable in current audit | Bundle digest must not be replaced by a child digest; no `ACPIDriver.sys` was present in the retained extraction |
 | `DLL-ACPIDRIVER-HISTORICAL` | `ACPIDriverDll.dll` | Native service component; size not retained | `97d7115943600c2a09951440859f9bd75fd0d8bff9db49c296c868b49df8c8c6` | `P916F-charge-reverse.tar.gz -> ACPIDriverDll.dll` (historical path) | extracted member namespace | Artifact-confirmed (historical); child hash retained, size/source bytes not retained | Not distributed | Historical interface landmarks: `\\.\ACPIDriver`, ReadEC IOCTL `0x9C40A488`, WriteEC IOCTL `0x9C40A48C`; not a published driver |
 | `EXE-GCUSERVICE-HISTORICAL` | `GCUService.exe` | Native service component; size not retained | `01225ef470420d50e51bc541d63dd5ed321835d40c4209106da9908c8f277a9c` | `P916F-charge-reverse.tar.gz -> GCUService.exe` (historical path) | extracted member namespace | Artifact-confirmed (historical); child hash retained, size/source bytes not retained | Not distributed | Historical names/types only; important method bodies were not recovered as normal unobfuscated logic |
 | `BOOT-GIF-115` | OEM boot animation resource | GIF; `800 x 600`, 60 frames, approximately 1.74 s; exact size/digest not retained | not retained | BIOS 1.15 resource associated with `OemBadgingSupportDxe`; no raw container offset promoted | firmware-resource namespace; do not treat duration as measured boot time | Artifact-confirmed (historical baseline metadata); exact resource extraction remains pending | Not distributed | GUID `931F77D1-10FE-48BF-AB72-773D389E3FAA`; exact size/hash and extraction offsets remain P11 |
@@ -50,6 +56,16 @@ The current image and preferred EC carve are the first two records in the baseli
 
 The earlier updater carve also contains the retained string `AMD Motherboard`. The compact charge-reverse extraction included AirplaneDriver-related files in addition to the listed native/service components. Both compact bundles are derived research collections, not independently authenticated vendor distributions.
 
+## Newly recovered Project/Library artifacts
+
+These records were recovered after the initial documentation consolidation. They are private research inputs and are not added to the public repository as binaries.
+
+| Artifact ID | Canonical filename | Type / size | SHA-256 | Evidence / boundary | Availability |
+|---|---|---|---|---|---|
+| `WIN-NAHIMIC-EXPORT` | `NahimicExport.zip` | ZIP; 20,004,555 bytes; 112 entries | `4099d9631368deff8bc39ee07a948134097d56b75db39f6e8b0ff3b0a9de0906` | Artifact-confirmed raw bytes, S15. Contains Nahimic/A-Volute app state, APO/service/registry evidence and EQ presets; not a complete runtime DSP graph | Private source; not distributed |
+| `SREP-REVEAL-PHOTO` | `image-1789545520742.jpg` | JPEG; 373,251 bytes | `38b11bb1a736a9373632c78b1949128164cfb7a842b0c67068196cc1fa5d52db` | Artifact-confirmed raw bytes, S14. Shows the expanded BIOS Boot page; does not identify exact successful patcher/config | Private source; not distributed |
+
+The Nahimic archive's EQ preset selection and endpoint/APO evidence are documented in [`audio.md`](audio.md). The photograph/configuration evidence and remaining successful-session association gap are documented in [`srep-runtime-reveal.md`](srep-runtime-reveal.md).
 
 ## Uploaded package identities
 
@@ -128,18 +144,17 @@ The artifact registry keeps the following baseline landmarks even when the sourc
 - SetupUtility FFS GUID `FE3542FE-C1D3-4EF8-657C-8048606FF670`; Boot formset GUID `2D068309-12AC-45AB-9600-9187513CCDD8`; SystemConfig VarStore GUID `A04A27F4-DF00-4D42-B552-39511302113D`.
 - Retained runtime setup observation: `Setup[0x6E] = 0x01` for Quiet Boot at the time of the test. The SREP runtime reveal and the untested permanent PE landmark are separate records.
 - The compact bundle's native component used the historical Windows device path `\\.\ACPIDriver`, ReadEC IOCTL `0x9C40A488` and WriteEC IOCTL `0x9C40A48C`. These are provenance landmarks, not an executable interface supplied by this repository.
-
 - Historical GX package paths retained from the baseline package context: `AiStoneService/GCUBridge.exe`, `AiStoneService/MyControlCenter/ACPIDriverDll.dll`, `AiStoneService/MyControlCenter/GCUService.exe`, `AiStoneService/MyControlCenter/GCUServicePlugin.dll` and `AiStoneService/MyControlCenter/GCUUtil.exe`. The measured package inventory has no selected member digests for these paths; they are not promoted to P916F runtime support.
 
 ## Missing identities and distribution policy
 
-The following nulls are deliberate and have a specific gate:
+The following unresolved identities are deliberate and have a specific gate:
 
-| Missing identity | Why it is not substituted | Gate |
+| Missing identity | Current evidence | Gate |
 |---|---|---|
-| Outer `STX_SKU2_1.15.zip` size/digest | The measured child EXE is nested inside it and cannot identify the outer ZIP | P17: recover the exact outer archive bytes and hash |
-| `P916F-charge-reverse.tar.gz` size/digest | A child hash does not identify the containing bundle | P17: recover bundle bytes and hash |
-| Current raw ROM and 128 KiB EC rehash | Historical baseline identities are retained, but source bytes are not distributed | P16: obtain exact source bytes before rehashing |
+| Outer `STX_SKU2_1.15.zip` size/digest | The measured child EXE is nested inside it and cannot identify the outer ZIP | P17b: recover the exact outer archive bytes and hash |
+| `P916F-charge-reverse.tar.gz` digest | Exact private parent object is located at 10,092,171 bytes, but raw-byte materialization was unavailable; a child hash still cannot identify the parent | P17a: rehash exact parent bytes when authorized/exportable |
+| Current raw ROM and 128 KiB EC rehash | Exact private Library objects are located with expected sizes; historical digests remain retained but were not recomputed | P16: rehash exact source bytes when raw-byte export is available |
 | Exact boot GIF size/digest/extraction offsets | Baseline geometry/GUID metadata does not establish a container offset | P11: recover the identified resource and extraction record |
 
 No vendor download URL or upload timestamp is used as a substitute for a missing identity. The repository does not publish raw ROM, EC images, vendor EXE/SYS/DLL/GIF resources or private reports. A matching digest identifies bytes only; it does not certify vendor authenticity, P916F compatibility or safe execution.
