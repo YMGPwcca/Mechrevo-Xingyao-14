@@ -31,7 +31,7 @@ S2 and S11 digests identify authorized raw-file exports; S3, S12, S13 and the S1
 
 ## Baseline access
 
-The baseline snapshot is identified by commit `da1470aec6631c66b0a06b3ee26e740ec18477c2` and tree `265150dcaca51a957e3ebb0bb1b5951b04f23903`; the public reference is the [baseline repository tree](https://github.com/YMGPwcca/Mechrevo-Xingyao-14/tree/da1470aec6631c66b0a06b3ee26e740ec18477c2). The baseline technical pages remain the source for retained historical observations. Editorial consolidation does not constitute a hardware rerun.
+The baseline research tree is identified by commit `da1470aec6631c66b0a06b3ee26e740ec18477c2` and tree `265150dcaca51a957e3ebb0bb1b5951b04f23903`; the public reference is the [baseline repository tree](https://github.com/YMGPwcca/Mechrevo-Xingyao-14/tree/da1470aec6631c66b0a06b3ee26e740ec18477c2). The baseline technical pages remain the source for retained historical observations. Editorial consolidation does not constitute a hardware rerun.
 
 ## Artifact inspection record
 

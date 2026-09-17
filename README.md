@@ -7,6 +7,7 @@ The reference preserves register maps, implementation details, artifact identiti
 ## Applicability and safety
 
 The principal baseline is **P916F-STX, BIOS 1.15, firmware-reported EC 1.15**. Compatibility with P916F-HPT-R, P916F-ARL, other Xingyao products or later firmware is not established.
+
 `main` is the evolving technical reference. Frozen documentation snapshots use annotated Git tags named `p916f-stx-bios-1.15-reference-YYYY-MM-DD[-rN]`; a snapshot identifies the documentation state at that tag and does not imply that all open research questions are resolved.
 
 Offline file inspection does not access the laptop. Hardware state queries may still require I/O-port writes; EC setters can change charging or thermal state. Saving setup changes can write NVRAM, while SPI flashing modifies firmware storage. These are distinct operations with distinct effects. A successful getter or a static implementation does not validate a setter. Untested setters and permanent patch landmarks are research evidence, not validated operating procedures.
