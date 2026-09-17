@@ -105,7 +105,7 @@ The [boot-logo investigation](boot-logo-research.md) documents the two examined 
 
 The recorded SetupUtility FFS GUID is `FE3542FE-C1D3-4EF8-657C-8048606FF670`. The Boot formset GUID is `2D068309-12AC-45AB-9600-9187513CCDD8`.
 
-The full [S2 audit](research-sources.md#project-sources), `P916F-STX_BIOS_1.15_full_option_audit.md` (`file_00000000179c8206a3dc01afcd82478c`), identifies Power, Advanced, Main, Boot, Security and Exit formsets plus separate AMD PBS/CBS HII formsets. They are not automatically ordinary children of OEM Advanced. [BIOS setup options](bios-setup-options.md) preserves all 8 formset, 28 reachability, 151 SetupUtility question/action, 204 PBS and 416 CBS rows. These are independently counted source-table categories. P01 source import is complete; IFR defaults and static presence do not establish live values, hardware support or behavior.
+The full [S2 audit](research-sources.md#project-sources) identifies Power, Advanced, Main, Boot, Security and Exit formsets plus separate AMD PBS/CBS HII formsets. They are not automatically ordinary children of OEM Advanced. [BIOS setup options](bios-setup-options.md) preserves all 8 formset, 28 reachability, 151 SetupUtility question/action, 204 PBS and 416 CBS rows. These are independently counted source-table categories. P01 source import is complete; IFR defaults and static presence do not establish live values, hardware support or behavior.
 
 ### Quiet Boot
 

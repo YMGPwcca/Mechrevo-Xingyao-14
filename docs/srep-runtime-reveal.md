@@ -24,20 +24,19 @@ It also names `SuppressIfPatcher` and a subsequent load/execute operation for `S
 
 Two additional Quiet-Boot candidate records were recovered as S14:
 
-| Candidate | File ID | Recovered text representation | Boundary |
-|---|---|---|---|
-| `SREP_Config_P916F-STX_1.15_QuietBoot.cfg` | `file_000000009a3c81fdaa0f114764116d19` | 152 bytes; SHA-256 `b7359ed2189796efbfff6be5e82c0d7ba7ba969fcef9156366b25949919297ef` | Targets the SetupUtility suppression-pattern change with a normal patch operation |
-| `SREP_Config_P916F-STX_1.15_QuietBoot_v2.cfg` | `file_00000000616c81fd925350de1bc670b0` | 158 bytes; SHA-256 `8a56d7d2c89cb5fa48a49669e18f75797cfebef72f95e64fee40bf6ffafac022` | Targets the same pattern with a fast-patch operation |
+| Candidate | Recovered text representation | Boundary |
+|---|---|---|
+| `SREP_Config_P916F-STX_1.15_QuietBoot.cfg` | 152 bytes; SHA-256 `b7359ed2189796efbfff6be5e82c0d7ba7ba969fcef9156366b25949919297ef` | Targets the SetupUtility suppression-pattern change with a normal patch operation |
+| `SREP_Config_P916F-STX_1.15_QuietBoot_v2.cfg` | 158 bytes; SHA-256 `8a56d7d2c89cb5fa48a49669e18f75797cfebef72f95e64fee40bf6ffafac022` | Targets the same pattern with a fast-patch operation |
 
 The exact directive bodies remain private evidence rather than a published turnkey patch recipe. Their existence and hashes establish the candidate records, not which one produced the successful session.
 
 ## Recovered runtime photograph
 
-The post-reveal BIOS photograph is now recovered directly from the Project/Library collection:
+The post-reveal BIOS photograph is retained as source S14; its exact private locator is recorded in the [source register](research-sources.md#project-sources):
 
 ```text
 filename:  image-1789545520742.jpg
-file ID:   file_00000000969082309523c0a97474cb7f
 size:      373251 bytes
 SHA-256:   38b11bb1a736a9373632c78b1949128164cfb7a842b0c67068196cc1fa5d52db
 ```

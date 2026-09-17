@@ -7,6 +7,7 @@ The reference preserves register maps, implementation details, artifact identiti
 ## Applicability and safety
 
 The principal baseline is **P916F-STX, BIOS 1.15, firmware-reported EC 1.15**. Compatibility with P916F-HPT-R, P916F-ARL, other Xingyao products or later firmware is not established.
+`main` is the evolving technical reference. Frozen documentation snapshots use annotated Git tags named `p916f-stx-bios-1.15-reference-YYYY-MM-DD[-rN]`; a snapshot identifies the documentation state at that tag and does not imply that all open research questions are resolved.
 
 Offline file inspection does not access the laptop. Hardware state queries may still require I/O-port writes; EC setters can change charging or thermal state. Saving setup changes can write NVRAM, while SPI flashing modifies firmware storage. These are distinct operations with distinct effects. A successful getter or a static implementation does not validate a setter. Untested setters and permanent patch landmarks are research evidence, not validated operating procedures.
 
@@ -46,7 +47,8 @@ The EC image's internal string `IT557x V1.09 E00 - 20230831` is a separate versi
 |---|---|
 | Platform | [Hardware](docs/hardware-platform.md), [Linux](docs/linux.md), [audio](docs/audio.md) |
 | BIOS / UEFI | [Firmware structure](docs/firmware-bios.md), [setup options](docs/bios-setup-options.md), [access](docs/firmware-access.md), [boot graphics](docs/boot-logo-research.md), [runtime setup visibility](docs/srep-runtime-reveal.md) |
-| Embedded controller | [Architecture/registers](docs/embedded-controller.md), [charge protocol](docs/battery-charge-limit.md), [battery semantics](docs/battery-threshold-semantics.md), [thermal interfaces](docs/thermal-performance.md) |
+| Embedded controller | [Architecture/registers](docs/embedded-controller.md), [thermal interfaces](docs/thermal-performance.md) |
+| Battery control | [Charge protocol](docs/battery-charge-limit.md), [T1/T2 semantics](docs/battery-threshold-semantics.md), [power-loss observation](docs/battery-limit-power-loss-observation.md) |
 | ACPI / OEM | [ACPI/WMI](docs/acpi-wmi.md), [Control Center analysis](docs/control-center.md) |
 | Evidence | [Validation](docs/validation.md), [claim matrix](docs/evidence-matrix.md), [artifacts](docs/research-artifacts.md), [sources](docs/research-sources.md) |
 | Research process | [Methodology](docs/reverse-engineering-methodology.md), [tooling](docs/reproduction-tooling.md), [technical questions](docs/open-questions.md), [documentation status](docs/documentation-status.md) |

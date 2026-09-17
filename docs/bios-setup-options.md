@@ -2,7 +2,7 @@
 
 ## Scope and source boundary
 
-The complete static inventory from `P916F-STX_BIOS_1.15_full_option_audit.md` is reproduced below: P916F-STX BIOS 1.15, analysed package `STX_SKU2_1.15.zip` / InsydeH2O. Source S2 is the authorized raw-file export associated with `file_00000000179c8206a3dc01afcd82478c`; its identity is recorded in the [source register](research-sources.md#project-sources). All five source tables are preserved, including reference/action rows, duplicate and blank labels, VarStores, offsets, choices, defaults and analyst risk annotations. This is full coverage of the identified audit, not a claim that every firmware implementation or live behavior has been validated.
+The complete static inventory from `P916F-STX_BIOS_1.15_full_option_audit.md` is reproduced below: P916F-STX BIOS 1.15, analysed package `STX_SKU2_1.15.zip` / InsydeH2O. Source S2 is the authorized raw-file export; its exact locator, digest and export identity are recorded in the [source register](research-sources.md#project-sources). All five source tables are preserved, including reference/action rows, duplicate and blank labels, VarStores, offsets, choices, defaults and analyst risk annotations. This is full coverage of the identified audit, not a claim that every firmware implementation or live behavior has been validated.
 
 ### Counts in this page
 

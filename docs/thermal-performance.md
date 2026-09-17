@@ -2,7 +2,7 @@
 
 ## Evidence scope
 
-The interface definitions on this page are derived from the complete recovered S3 Project text extraction and the selected S4/S5 DSDT excerpts. S13 adds a recovered live H2RAM/GFNS capture, while S6 now includes the recovered historical April source that uses the older `0x91` / `0x92` SPFM command pair. The source material is `SRC-AML-C` (`S3`) for thermal fields, `THMM`, `_Q16`, `_Q40`, `_Q81`, `_QA0` and `_QA1`, `SRC-AML-A` (`S4`) for `GFNS`/`GVER`, `SRC-AML-B` (`S5`) for `GPFM`/`SPFM`/`GKBT`/`SKBT`, `SRC-AML-D` (`S4`) for line locators, `SRC-FAN-LIVE` (`S13`) for the live field/query correlation, and `SRC-AML-OLD` (`S6`) for the historical discrepancy. See [source register](research-sources.md#project-sources) and the [pending-evidence register](documentation-status.md#pending-evidence).
+The interface definitions on this page are derived from the recovered S3 ACPI/EC text capture and selected S4/S5 DSDT excerpts. S13 adds a recovered live H2RAM/GFNS capture, while S6 provides the historical April source that uses the older `0x91` / `0x92` SPFM command pair. Stable source IDs and exact provenance are maintained in the [source register](research-sources.md#project-sources), and unresolved source-association questions remain in the [pending-evidence register](documentation-status.md#pending-evidence).
 
 The S3 extraction includes the complete THMM body and query handlers; it is a concatenated source capture with discontinuities elsewhere, not a compilable complete DSDT. Its digest identifies the extracted text, not original raw File Library bytes. These sources establish AML field layout, dispatch and control flow. S13 additionally establishes that the two live GFNS result words track the two live H2RAM FNS fields. It does **not** establish that the numerical unit is RPM, provide an independent tachometer calibration, validate a profile write, or recover raw PWM control. The September excerpts use `ECMD(0x94)` and `ECMD(0x95)` in `SPFM`; the recovered April source uses `0x91` and `0x92`, but its exact same-session firmware identity remains unresolved. The two maps must not be merged.
 
@@ -75,7 +75,7 @@ The word occupies two response bytes beginning at offset one; the expected byte 
 
 ### Recovered live H2RAM/GFNS correlation
 
-S13 (`Pasted text(7).txt`, file ID `file_000000004e1081fdb6c0290bf45d182f`) contains a direct host-memory read followed by live GFNS calls. The relevant H2RAM bytes were:
+S13 contains a direct host-memory read followed by live GFNS calls. The relevant H2RAM bytes were:
 
 ```text
 host 0xFEEC233B..0xFEEC233E: 91 0f cd 0e
@@ -340,12 +340,10 @@ The historical source discrepancy is no longer merely a source locator. S6 now c
 
 ```text
 Pasted text(16).txt
-  file ID:   file_00000000f5ac72069ac142ca1b550984
   size:      7465 bytes
   SHA-256:   21d40ec647d5859a2b6feb19ec206dd296eaba45666d7d3e8bc4b17da5966d34
 
 dsdt.dsl
-  file ID:   file_00000000d828720693d8a857cd39fefd
   size:      253103 bytes
   SHA-256:   43f4b40e70ac867416b9137e3d41ae12ead76224038dcfb6a4943bfc41466296
   DSDT len:  0x836B / 33643 bytes
