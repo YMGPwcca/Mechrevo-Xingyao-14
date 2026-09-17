@@ -4,28 +4,37 @@ This page records unresolved hardware, firmware and behavior questions. It does 
 
 ## Battery charge limit
 
-The `T1=80%`, `T2=100%` pair and its normal-reboot readback are behaviorally recorded. A later live observation after battery depletion caused complete system power loss found `Enabled=0`, `T1=0`, `T2=0` on the next powered session, so persistence across that recorded event is no longer unresolved. The following remain unresolved:
+The high-level behavioral meaning of both thresholds is now established on the investigated unit. The live `85/90` experiment demonstrated three regions: charging below T1, hold between T1 and T2, and sustained active battery discharge above T2 while AC remained online. See [`battery-threshold-semantics.md`](battery-threshold-semantics.md).
 
-- Exact user-facing meaning of `T2` / `XRAM[0x0D14]`.
-- Behavior of threshold pairs other than the validated `T1=80%`, `T2=100%` configuration.
-- Exact internal SOC resolution and rounding around the stop/restart boundary.
-- Exact hysteresis width between charging stop and restart.
+The following remain unresolved:
+
+- Whether every valid T1/T2 pair follows the same three-region behavior under every battery, load and temperature condition.
+- Behavior when `T1 == T2`.
+- Live behavior of reversed thresholds where `T1 > T2`; static control flow contains a bypass path, but it has not been behaviorally tested.
+- Exact internal SOC resolution and the exact EC comparator value at each transition.
+- Why Linux displayed 84% around the T1=85 transition and continued to display 90% during part of the T2=90 release transition; rounding, update cadence and sampling remain possible explanations rather than established causes.
+- EC SOC polling cadence, fuel-gauge update cadence and their relationship to Linux `capacity` refresh timing.
+- Exact hysteresis width, if any, beyond the observed three-region boundaries.
 - The exact transition that cleared the battery-limit fields during the recorded battery-depletion full-power-loss event: depletion/brownout, an EC reset, firmware initialization on the next power-on, or another event-associated transition.
 - Whether other power-loss classes such as battery disconnect, CMOS/RTC-power removal, explicit EC reset, firmware update or other G3 entries produce the same clearing behavior.
 - Storage mechanism responsible for persistence across a normal reboot and loss across the recorded depletion event.
 - Whether the statically identified `0xF1 0x10` reset/disable path has the expected user-facing rollback behavior; its clearing logic is not a live rollback result.
+- Complete response, error, timeout, stale-output and concurrency contract for PMC2 charge-control transactions.
 
-The setter range check establishes an inclusive stored range of decimal `0..100`; it does not establish an arbitrary percentage cap or a complete transport contract. See the [battery-depletion power-loss observation](battery-limit-power-loss-observation.md) for the new live capture and its boundaries.
+The setter range check establishes an inclusive stored range of decimal `0..100`; it does not establish that every arbitrary pair is a recommended or behaviorally equivalent policy. The behavioral semantics are documented separately from the transport contract.
 
 ## Charger and power path
 
+The `85/90` experiment establishes that the battery can be intentionally driven into sustained multi-watt discharge while AC remains online and that this active-discharge state is released near the T2 region. The exact electrical implementation is still unresolved.
+
+- Exact charger IC model.
+- Exact meaning of the downstream charger register `0x12`, bit 5 operation identified in static analysis; a BQ25700A/BQ25710-family `EN_LEARN`-like interpretation is compatible with the observed behavior but remains a family-level inference.
 - Exact semantics of EC working words around `XRAM[0x0D54..0x0D68]`.
 - End-to-end confirmation of the charger transactions associated with command numbers `0x14` and `0x15`.
-- Electrical conditions under which the battery contributes energy while AC is online.
-- Whether the observed AC-online `Not charging` / `power_now=0` state is selected by charger policy, system load, battery state or another condition.
 - Complete charger topology and wall-side adapter power behavior.
+- Electrical conditions, limits and protection logic applied during the active-discharge region.
 
-The retained energy decrease during CPU load is an electrical observation at the battery telemetry boundary, not a complete power-path model.
+The observed decrease from approximately 68.116 Wh to 64.972 Wh during the T2 discharge interval proves net battery-energy loss while AC was online, but it is not a calibrated wall-side power measurement.
 
 ## PMC2 and ACPI/WMI
 
@@ -79,7 +88,8 @@ The standard Insyde type-`0x54` and type-`0x6D` logo-update paths are unavailabl
 
 ## Linux integration
 
-- Whether the EC charge limiter can be represented through a future or nonstandard Linux interface without conflating it with the generic power-supply threshold ABI.
+- Whether the EC charge limiter should eventually be represented through a dedicated machine-specific Linux service, a kernel interface, or another integration without conflating it with the generic power-supply threshold ABI.
+- Whether a persistent Linux implementation can safely use an idempotent read/compare/restore flow at boot; the behavioral need for state restoration after the observed depletion event is established, but production-grade transaction ownership and concurrency semantics are not.
 - Whether `platform_profile` or another standard Linux thermal/profile interface is exposed on a later or different software environment; no retained capture establishes current support or absence.
 - Which kernel, ALSA and installed WirePlumber package versions affect the observed interfaces; current conclusions are scoped to the retained environment.
 - Panel model/EDID/refresh and AC-adapter identity/rating. The installed SSD model `YMTC PC41Q-1TB-B` is recovered for the investigated unit, so storage model is no longer part of this missing-inventory set.
