@@ -2,7 +2,7 @@
 
 This matrix is the claim-level index for the documented MECHREVO Xingyao 14 / `P916F-STX`. It retains every row from the 118-line baseline matrix under stable `BASE-*` IDs and adds source-backed thermal, firmware-access, setup, SREP, package, device and audio claims. `Evidence class` and `Source coverage` are separate: a historical live finding can remain live-confirmed when only its report is retained, while a complete-looking source excerpt does not become a live test.
 
-Canonical class definitions and coverage terms are maintained in [`reverse-engineering-methodology.md`](reverse-engineering-methodology.md#evidence-classification). Source IDs `S1`–`S17` and exact locators are defined in [`research-sources.md`](research-sources.md#project-sources). Source links lead to public technical pages; File IDs identify provenance, not publicly downloadable evidence.
+Canonical class definitions and coverage terms are maintained in [`reverse-engineering-methodology.md`](reverse-engineering-methodology.md#evidence-classification). Source IDs `S1`–`S18` and exact locators are defined in [`research-sources.md`](research-sources.md#project-sources). Source links lead to public technical pages; File IDs identify provenance, not publicly downloadable evidence.
 
 ## Baseline claims — platform and firmware
 
@@ -85,8 +85,14 @@ Scope shorthand: `P916F-STX / BIOS 1.15` means the identified unit and tested fi
 | BASE-053 | Arbitrary `T1=N,T2=100` produces an N% cap | Documented unit | Not established | Full bytes/capture included | S1 · [threshold semantics](battery-charge-limit.md#threshold-semantics) | Only the `80/100` pair was behaviorally validated; setter range alone is insufficient. |
 | BASE-054 | Exact semantic role of T2 is known | Documented unit and EC image | Not established | Retained report only | S1 · [threshold semantics](battery-charge-limit.md#threshold-semantics) | Control-flow participation is known; user-facing meaning is not. |
 | BASE-055 | Exact hysteresis width is known | Documented unit | Not established | Full bytes/capture included | S1 · [boundary behavior](validation.md#8-boundary-behavior-below-the-cap) | Linux SOC is integer-rounded; fractional threshold and exact restart width are unresolved. |
-| BASE-056 | State persists across normal reboot | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [reboot persistence](validation.md#10-reboot-persistence) | Post-reboot readback returned state 1 / T1 80 / T2 100; this is not EC-power-loss evidence. |
-| BASE-057 | State persists across complete EC power loss | Documented unit | Not tested | Full bytes/capture included | S1 · [reboot persistence](validation.md#10-reboot-persistence) | No complete EC power-loss or battery-controller reset test is retained. |
+| BASE-056 | State persists across normal reboot | Documented unit | Live-confirmed | Full bytes/capture included | S1 · [reboot persistence](validation.md#10-reboot-persistence) | Post-reboot readback returned state 1 / T1 80 / T2 100. The later S18 depletion event is a distinct power-loss class and does not invalidate normal-reboot persistence. |
+| BASE-057 | State persists across complete EC power loss | Documented unit; recorded battery-depletion full-power-loss event | Rejected | Full capture included | S18 · [power-loss observation](battery-limit-power-loss-observation.md) · [validation](validation.md#battery-depletion-full-power-loss-observation) | After battery depletion caused complete system power loss, the next observed state was 0 / 0 / 0. This rejects persistence for that recorded event only; it does not establish every G3, battery-disconnect or EC-reset class. |
+
+## Added battery persistence claim
+
+| ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
+|---|---|---|---|---|---|---|
+| BATTERY-001 | Battery-limit state was disabled with both thresholds zero after the recorded battery-depletion full-power-loss event | Documented P916F-STX unit; firmware revision not repeated in the new capture | Live-confirmed | Full capture included | S18 · [power-loss observation](battery-limit-power-loss-observation.md) · [validation](validation.md#battery-depletion-full-power-loss-observation) | `Enabled=0`, `T1=0`, `T2=0` were observed with AC online, SOC 89 and status Charging. The clearing mechanism and behavior under other reset/power-loss classes remain unestablished. |
 
 ## Baseline claims — power path
 
