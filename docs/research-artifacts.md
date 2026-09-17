@@ -10,6 +10,18 @@ Each record uses the following fields where they carry information: artifact ID,
 
 Measured package records below come from `inventory/mounted_artifacts.json` (`SRC-BINARIES`). SFX member and extraction records come from `inventory/sfx_inspection.json` (`SRC-SFX`). Both are offline byte measurements, not hardware tests. A `historical` record preserves a baseline report identity; it is not presented as a new rehash.
 
+### Recovered text-source identities
+
+These are offline measurements of supplied source exports, not firmware artifacts. Their source text is curated into the linked technical pages; original private reports and shell transcripts are not distributed wholesale. The extraction chain is `MECHREVO_PR2_SOURCE_RECOVERY.zip` → `mechrevo_pr2_sources/` → filename below; archive-member position is not a firmware offset.
+
+| Source / filename | Representation and size | SHA-256 | Coverage / use |
+|---|---|---|---|
+| S2 · `P916F-STX_BIOS_1.15_full_option_audit.md` | Authorized raw file export; 140821 bytes, 859 lines | `525c46baa22a0d868b56c36d4094cc13f314bdfccba239f4332c3159983e5271` | Full static audit; every inventory row in [setup reference](bios-setup-options.md) |
+| S3 · `Pasted text(4).txt` | Project text extraction; 33532 bytes, 937 lines | `fd33e0fc94a69c558156ae82e124a213f891627daa788fc65d84e03c0d73cc16` | Full extracted text, not original raw-byte identity or complete DSDT; complete [THMM](thermal-performance.md#thmm-conditional-alib-parameter-sequence) and selected technical excerpts |
+| S11 · `Pasted text(71).txt` | Authorized raw file export; 12706 bytes, 209 lines | `994d5a0b7df61bccec35d1ef6bb7a7818aa6e9ec33dbef430a5b6307ac1ee0a0` | Full device/audio capture examined; curated [audio](audio.md#recovered-device-and-kernel-capture) and [Linux inventory](linux.md#audio-and-peripheral-inventory) |
+
+Exact File IDs and classification limits are in the [source register](research-sources.md#project-sources). A checked text-export hash establishes byte identity of that representation only; it does not independently validate the source analyst's interpretation or certify hardware behavior. The `xingyao.fw` filename appears in S11 but its bytes, size, digest and origin are not recovered.
+
 ## Baseline machine-specific artifacts
 
 The following records preserve the baseline identities and landmarks. Their source coverage is retained report or historical analysis unless explicitly marked as a new measurement below.

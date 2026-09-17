@@ -2,9 +2,9 @@
 
 ## Evidence scope
 
-The interface definitions on this page are derived from selected recovered DSDT excerpts, not from a complete ACPI-table export or a new live fan experiment. The source material is `SRC-AML-C` (`S3`) for thermal fields, `THMM`, `_Q16`, `_Q40`, `_Q81`, `_QA0` and `_QA1`, `SRC-AML-A` (`S4`) for `GFNS`/`GVER`, `SRC-AML-B` (`S5`) for `GPFM`/`SPFM`/`GKBT`/`SKBT`, and `SRC-AML-D` (`S4`) for line locators. See [source register](research-sources.md#project-sources) and the [pending-evidence register](documentation-status.md#pending-evidence).
+The interface definitions on this page are derived from the complete recovered S3 Project text extraction and the selected S4/S5 DSDT excerpts, not from a complete ACPI-table export or a new live fan experiment. The source material is `SRC-AML-C` (`S3`) for thermal fields, `THMM`, `_Q16`, `_Q40`, `_Q81`, `_QA0` and `_QA1`, `SRC-AML-A` (`S4`) for `GFNS`/`GVER`, `SRC-AML-B` (`S5`) for `GPFM`/`SPFM`/`GKBT`/`SKBT`, and `SRC-AML-D` (`S4`) for line locators. See [source register](research-sources.md#project-sources) and the [pending-evidence register](documentation-status.md#pending-evidence).
 
-These excerpts establish AML field layout, dispatch and control flow. They do not provide a new live validation of fan speed, profile transitions or raw PWM writes. No unsupported live fan data is asserted here. The September excerpts use `ECMD(0x94)` and `ECMD(0x95)` in `SPFM`; an earlier April source uses `0x91` and `0x92`, but its firmware identity is incomplete. The two maps must not be merged.
+The S3 extraction includes the complete THMM body and query handlers; it is a concatenated source capture with discontinuities elsewhere, not a compilable complete DSDT. Its digest identifies the extracted text, not original raw File Library bytes. These sources establish AML field layout, dispatch and control flow. They do not provide a new live validation of fan speed, profile transitions or raw PWM writes. No unsupported live fan data is asserted here. The September excerpts use `ECMD(0x94)` and `ECMD(0x95)` in `SPFM`; an earlier April source uses `0x91` and `0x92`, but its firmware identity is incomplete. The two maps must not be merged.
 
 ## EC-visible fields
 
@@ -117,7 +117,7 @@ Return (BUFF)
 | `0x02` | `THMM(0x02)` | `0x95` |
 | Other values | `THMM` is still invoked | No branch-specific EC command in this method |
 
-`THMM` is called before the two EC-command branches are checked. A nonzero returned status therefore does not prove that no earlier state-changing action occurred. The complete `THMM` body is unavailable: no input outside the two branch-specific profiles is established as a supported or side-effect-free request.
+`THMM` is called before the two EC-command branches are checked. A nonzero returned status therefore does not prove that no earlier state-changing action occurred. The recovered `THMM` body also contains an ALIB branch for `0x03`; this does not make that input a supported or side-effect-free `SPFM` request.
 
 No direct `SPFM` write was independently live-validated in the recovered evidence set. The presence of a host-callable method is not a production safety or compatibility guarantee.
 
@@ -131,21 +131,27 @@ No direct `SPFM` write was independently live-validated in the recovered evidenc
 | `MSID` | `0x02` | 8 bits | Parameter selector |
 | `MSDV` | `0x03` | 32 bits | Parameter value |
 
-The supplied `SRC-AML-C` excerpt shows the Balance branch gated by `DPTC == One`. It contains these assignments and calls:
+The complete S3 text extraction contains all three branches, each guarded by `DPTC == One`. Every assignment pair is followed by `ALIB(0x0C, DPTI)`:
 
-| THMM argument | MSID | MSDV | Following call present in excerpt |
-|---:|---:|---:|---|
-| `0x01` | `0x05` | `0x3A98` | `ALIB(0x0C, DPTI)` |
-| `0x01` | `0x06` | `0x7530` | `ALIB(0x0C, DPTI)` |
-| `0x01` | `0x07` | `0x61A8` | Excerpt ends at this assignment |
+| THMM argument | Static label | MSID | MSDV | Following call |
+|---|---|---|---|---|
+| `0x01` | Balance | `0x05` | `0x3A98` | `ALIB(0x0C, DPTI)` |
+| `0x01` | Balance | `0x06` | `0x7530` | `ALIB(0x0C, DPTI)` |
+| `0x01` | Balance | `0x07` | `0x61A8` | `ALIB(0x0C, DPTI)` |
+| `0x02` | Performance | `0x05` | `0x6D60` | `ALIB(0x0C, DPTI)` |
+| `0x02` | Performance | `0x06` | `0xAFC8` | `ALIB(0x0C, DPTI)` |
+| `0x02` | Performance | `0x07` | `0x88B8` | `ALIB(0x0C, DPTI)` |
+| `0x03` | LID | `0x05` | `0x3A98` | `ALIB(0x0C, DPTI)` |
+| `0x03` | LID | `0x06` | `0x7530` | `ALIB(0x0C, DPTI)` |
+| `0x03` | LID | `0x07` | `0x61A8` | `ALIB(0x0C, DPTI)` |
 
-The recovered `SRC-AML-C` excerpt includes the Balance branch framing and the three assignments:
+The full recovered method body follows; indentation alone is normalized:
 
 ```asl
 Method (THMM, 1, Serialized)
 {
     Name (DPTI, Buffer (0x07){})
-    M460 ("LCT-ASL- Change thermal mode = %d \n", Arg0, Zero, Zero, Zero, Zero, Zero, Zero)
+    M460 ("LCT-ASL- Change thermal mode = %d \n", Arg0, Zero, Zero, Zero, Zero, Zero)
     CreateWordField (DPTI, Zero, SSZE)
     CreateByteField (DPTI, 0x02, MSID)
     CreateDWordField (DPTI, 0x03, MSDV)
@@ -155,7 +161,7 @@ Method (THMM, 1, Serialized)
     {
         If ((DPTC == One))
         {
-            M460 ("LCT-ASL- Change to Balance Mode proc DPTC ALIB Call\n", Zero, Zero, Zero, Zero, Zero, Zero, Zero)
+            M460 ("LCT-ASL- Change to Balance Mode proc DPTC ALIB Call\n", Zero, Zero, Zero, Zero, Zero, Zero)
             MSID = 0x05
             MSDV = 0x3A98
             ALIB (0x0C, DPTI)
@@ -164,9 +170,49 @@ Method (THMM, 1, Serialized)
             ALIB (0x0C, DPTI)
             MSID = 0x07
             MSDV = 0x61A8
+            ALIB (0x0C, DPTI)
+        }
+    }
+    ElseIf ((Arg0 == 0x02))
+    {
+        If ((DPTC == One))
+        {
+            M460 ("LCT-ASL- Change to Performance Mode proc DPTC ALIB Call\n", Zero, Zero, Zero, Zero, Zero, Zero)
+            MSID = 0x05
+            MSDV = 0x6D60
+            ALIB (0x0C, DPTI)
+            MSID = 0x06
+            MSDV = 0xAFC8
+            ALIB (0x0C, DPTI)
+            MSID = 0x07
+            MSDV = 0x88B8
+            ALIB (0x0C, DPTI)
+        }
+    }
+    ElseIf ((Arg0 == 0x03))
+    {
+        If ((DPTC == One))
+        {
+            M460 ("LCT-ASL- Change to LID Mode proc DPTC ALIB Call\n", Zero, Zero, Zero, Zero, Zero, Zero)
+            MSID = 0x05
+            MSDV = 0x3A98
+            ALIB (0x0C, DPTI)
+            MSID = 0x06
+            MSDV = 0x7530
+            ALIB (0x0C, DPTI)
+            MSID = 0x07
+            MSDV = 0x61A8
+            ALIB (0x0C, DPTI)
+        }
+    }
+
+    M460 ("LCT-ASL- THMM End \n", Zero, Zero, Zero, Zero, Zero, Zero)
+}
 ```
 
-The excerpt ends after the third value assignment. Performance/LID parameter sequences require the complete identified `THMM` source (P02). The available values are raw ALIB parameters, **not fan RPM**. Even if two profile sequences contain equal parameters, that would not establish byte-identical EC fan tables. Parameter units and effective electrical limits require an identified ALIB contract and platform evidence; no conversion to watts or temperature thresholds is made here.
+`Arg0 == Zero` has an empty branch. Arguments outside `0x01..0x03`, or `DPTC != One`, do not enter these ALIB sequences; framing and debug calls still occur. This bounds this method only, not all effects of its callers. There is no explicit return in the recovered body. The `0x03` branch does not establish a supported or live-validated `SPFM` setter: that caller has EC-command branches only for `0x01` and `0x02`.
+
+Balance and LID have equal ALIB selector/value sequences. This does **not** establish identical EC fan tables. MSDV values are raw ALIB parameters, not RPM, watts, temperature thresholds or fan-curve points. Their units and effective platform behavior require a separately identified ALIB contract and supporting evidence.
 
 ## Fn+X event path
 

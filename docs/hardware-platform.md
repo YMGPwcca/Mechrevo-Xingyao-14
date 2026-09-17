@@ -68,6 +68,8 @@ The retained internal-panel resolution is:
 
 No refresh-rate value, panel model, EDID digest or adapter rating is published here because the investigation did not retain a correctly identified capture with equivalent evidence quality. These are part of [P15](documentation-status.md#pending-evidence), not values to infer from a related laptop.
 
+The recovered [S11 device capture](research-sources.md#project-sources) includes the ALSA machine string `MECHREVO-XINGYAOSeries-Standard-XINGYAOSeries_P916F_STX`. Linux exposed two V4L2 device entries named FHD Camera, not an independently established two-camera physical layout. Digital and stereo microphone endpoint names are likewise logical interfaces. See [Linux inventory](linux.md#audio-and-peripheral-inventory) and [audio capture](audio.md#recovered-device-and-kernel-capture) for exact observations and PCI driver bindings.
+
 ## Internal display
 ### BGRT placement
 
@@ -233,6 +235,6 @@ The following boundaries are deliberate:
 |---|---|---|
 | [P02 — complete ACPI-table identity](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Original complete ACPI table/export header and digest, if available; excerpts do not establish a full-table identity |
 | [P14 — physical audio topology and OEM tuning](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Product specification or physical inspection for driver count, plus recovered OEM tuning evidence if available |
-| [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence) | `NEEDS_EVIDENCE` | Correct-machine capture for camera/microphone/modules and storage identifiers, kernel and audio-stack versions, panel identity/refresh/EDID and adapter details |
+| [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence) | Partially recovered | S11 records two FHD Camera V4L2 entries, digital/stereo microphones, loaded sound modules and PipeWire server `1.6.7`; storage identifiers, kernel/ALSA/WirePlumber package versions, panel/EDID/refresh and adapter details remain missing |
 
 No claim above depends on running a firmware writer, issuing an EC setter, or importing hardware data from another machine.

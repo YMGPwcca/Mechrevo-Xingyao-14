@@ -169,7 +169,7 @@ VarStore offset: 0x6E
 
 The form containing that setting was statically found under a suppression condition. Separately, a historical SREP session reportedly exposed the hidden Boot form at runtime. Static structure, runtime visibility and a saved setup-variable change are separate evidence classes.
 
-The full audit source reports PBS and CBS totals, but the complete source has not been exported. A short excerpt is not titled or treated as a full option inventory. IFR defaults, live variable reads and behavior are separate columns in any future import; a default never becomes a live value by inference.
+The recovered S2 audit is imported with all five inventories, counted independently: 8 formsets, 28 reachability records, 151 SetupUtility questions/actions, 204 PBS and 416 CBS controls. Coverage means completeness relative to this identified audit, not every possible firmware feature. Source choices, defaults, duplicate/blank labels and risk annotations remain intact. IFR defaults, live variable reads and behavior are separate evidence; a default never becomes a live value by inference.
 
 ### 6.2 Logo paths and negative evidence
 
@@ -275,7 +275,7 @@ The thermal evidence currently establishes AML field layout and dispatch, not a 
 
 The static `GFNS` method selects FNS0 or FNS1 for selector `0x00` or `0x01`; `GPFM` returns FTVL; `SPFM` reads the requested profile and calls `THMM` before its profile-specific branches. The September source maps profile `0x01` to `ECMD(0x94)` and `0x02` to `ECMD(0x95)`. An earlier source mentions `0x91` / `0x92` but lacks complete firmware identity, so the maps are not merged.
 
-`THMM` builds a seven-byte DPTI buffer; the supplied Balance excerpt shows three assignments and two following `ALIB` calls before the excerpt ends. Complete Performance/LID sequences require source recovery. ALIB parameters are not RPM curves or proof of EC fan-table equality. `_Q16` labels Balance and Performance event paths; `_Q40` and `_Q81` call `THMM(FTVL)`, with `_Q81` also notifying the lid object. `_QA0` and `_QA1` notify `LCBT` of information and status changes, then notify `ACAD`. This is static notification ordering, not a live power-transition result. Tachometer calibration, target-RPM tables and a direct PWM contract remain unestablished.
+The complete S3 `THMM` body builds a seven-byte DPTI buffer and supplies three ALIB selector/value pairs for each of Balance, Performance and LID, guarded by `DPTC == One`. Balance/LID pairs are equal; that does not establish identical EC fan tables. Parameters are not RPM, watts or fan-curve thresholds. `_Q16` labels Balance and Performance event paths; `_Q40` and `_Q81` call `THMM(FTVL)`, with `_Q81` also notifying the lid object. `_QA0` and `_QA1` notify `LCBT` of information and status changes, then notify `ACAD`, with the recorded sleeps between calls. This is static dispatch, not a live transition. The full recovered text extraction is not a complete DSDT; its digest identifies export text, not original raw File Library bytes.
 
 The ordering of `THMM` before the `ECMD(0x94)` / `ECMD(0x95)` branches is material: a nonzero returned status does not prove that the earlier call had no side effect. This is a static control-flow correction, not an instruction to exercise an unvalidated setter. See [`thermal-performance.md`](thermal-performance.md#spfm-profile-request) and [`open-questions.md`](open-questions.md#thermal-and-performance-control).
 
