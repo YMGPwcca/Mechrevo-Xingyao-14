@@ -64,7 +64,7 @@ P18 is resolved for the external references used in this revision: CC BY 4.0 leg
 
 | ID | Topic | State |
 |---|---|---|
-| P19 | Description, topics and repository features | Description and 14 relevant topics updated and read back. Issues remain enabled. Wiki and Projects remain enabled: the Wiki endpoint exposed no content, but usage was not conclusively established; Projects inspection requires the unavailable `read:project` token scope. Feature removal remains ADMIN_PENDING rather than assuming unused content. |
+| P19 | Description, topics and repository features | Description and 14 relevant topics are present. Issues remain enabled. Wiki was disabled after the public endpoint exposed no content, keeping repository documentation canonical under version control. Projects remains enabled because its usage was not established with the available project-inspection scope; no Projects setting was changed. |
 | P20 | Optional branch protection | NEEDS_CONFIRMATION. `main` was observed unprotected. No protection, approval requirement or mandatory CI was introduced without an agreed owner workflow. |
 
 Documentation commits and snapshot tags identify the text revision, not completion of the pending research. Publication identity is recorded in Git history and the delivery report rather than a self-referential commit hash in this file.

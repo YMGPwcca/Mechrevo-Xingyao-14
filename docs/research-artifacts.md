@@ -8,7 +8,7 @@ This repository is documentation-only. Binary firmware, vendor executables, extr
 
 Each record uses the following fields where they carry information: artifact ID, canonical filename, local upload alias, artifact type, size, SHA-256, parent/member path or extraction range, address-space relevance, evidence class, source coverage, availability and use. `Artifact-confirmed` describes a checked byte identity or structure; it does not mean that the artifact is public or that a vendor operation was executed.
 
-Measured package records below come from `inventory/mounted_artifacts.json` (`SRC-BINARIES`). SFX member and extraction records come from `inventory/sfx_inspection.json` (`SRC-SFX`). Both are offline byte measurements, not hardware tests. A `historical` record preserves a baseline report identity; it is not presented as a new rehash.
+Measured package records below come from the private audit record `inventory/mounted_artifacts.json` (`SRC-BINARIES`), and SFX member/extraction records come from the private audit record `inventory/sfx_inspection.json` (`SRC-SFX`). These identifiers describe retained audit inputs and are **not paths to files distributed in this public repository**. Both records contain offline byte measurements rather than hardware tests. A `historical` record preserves a baseline report identity; it is not presented as a new rehash.
 
 ### Recovered source identities
 
