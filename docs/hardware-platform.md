@@ -45,8 +45,6 @@ Additional EC strings:   ITE EC-V14.6
 
 These strings belong to different build or reporting namespaces. `IT557x V1.09` does not identify the system BIOS as version 1.09 and does not contradict the firmware UI's `EC 1.15` label. A separately retained BIOS 1.09 updater is historical package evidence, not evidence that every internal EC string changes with each BIOS release. Keeping these namespaces separate matters when comparing update packages, raw flash images and internal EC firmware revisions.
 
-Exact kernel, graphics-stack and firmware-tool versions were not reconstructed from unrelated installations. Missing environment records are tracked under [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence).
-
 ## CPU / graphics platform
 
 The recorded platform characteristics are:
@@ -249,6 +247,6 @@ The following boundaries are deliberate:
 |---|---|---|
 | [P02 — complete ACPI-table identity](documentation-status.md#pending-evidence) | `PARTIAL / NEEDS_EVIDENCE` | The September extraction/header capture is recovered; original raw `dsdt.dat` bytes/hash and exact BIOS association remain unresolved |
 | [P14 — physical audio topology and OEM tuning](documentation-status.md#pending-evidence) | `PARTIAL / NEEDS_EVIDENCE` | Nahimic application-level EQ/APO evidence is recovered; physical driver count, complete DSP graph and amplifier programming remain unresolved |
-| [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence) | Partially recovered | S11 records two FHD Camera V4L2 entries, digital/stereo microphones, loaded sound modules and PipeWire server `1.6.7`; an exact-machine capture now adds `YMTC PC41Q-1TB-B`; kernel/ALSA/WirePlumber package versions, panel/EDID/refresh and adapter details remain missing |
+| [P15 — additional platform inventory](documentation-status.md#pending-evidence) | Partially recovered | S11 records two FHD Camera V4L2 entries, digital/stereo microphones, loaded sound modules and PipeWire server `1.6.7`; an exact-machine capture adds `YMTC PC41Q-1TB-B`; panel/EDID/refresh and adapter identity/rating remain unrecorded |
 
 No claim above depends on running a firmware writer or importing hardware data from another machine. The battery setter operations discussed here are historical live evidence already recorded on the documented unit; this revision does not imply that additional hardware writes were performed during documentation editing.
