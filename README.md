@@ -28,7 +28,7 @@ Offline file inspection does not access the laptop. Hardware state queries may s
 | Firmware-reported EC | `1.15` |
 | BIOS build-date string | `05/07/2026`; date format not converted |
 | EC silicon | ITE `0x5571`, revision `0x07` |
-| Observed Linux environment | CachyOS / Arch-family; exact kernel version pending |
+| Observed Linux environment | CachyOS / Arch-family |
 
 The EC image's internal string `IT557x V1.09 E00 - 20230831` is a separate version namespace. The earlier BIOS 1.09 package is a historical artifact, not proof of identical live behavior. See [hardware identity](docs/hardware-platform.md) for attribution and scope.
 
