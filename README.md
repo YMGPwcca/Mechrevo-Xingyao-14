@@ -34,13 +34,94 @@ The EC image's internal string `IT557x V1.09 E00 - 20230831` is a separate versi
 
 ## Principal findings
 
-- **Battery charge control:** the EC battery policy uses two independently programmable thresholds with three live-observed regions. In the validated `T1=85%`, `T2=90%` experiment, `SOC < T1` permitted charging; the T1..T2 region settled into `Not charging`; and `SOC > T2` produced sustained multi-watt battery discharge while AC remained online. As SOC returned to the T2 region, the sustained discharge was released and the machine settled back into hold. The earlier `80/100` result is therefore explained as an approximately-80% cap with the active-discharge region effectively unreachable at `T2=100`. Exact Linux-visible comparator timing, arbitrary threshold-pair behavior and the exact charger silicon remain unresolved. A normal reboot retained the programmed state, while one later complete-battery-depletion event returned `Enabled=0`, `T1=0`, `T2=0` on the next powered session. [Protocol](docs/battery-charge-limit.md) · [T1/T2 semantics](docs/battery-threshold-semantics.md) · [Raw validation](docs/validation.md) · [Power-loss observation](docs/battery-limit-power-loss-observation.md).
-- **EC access architecture:** standard ACPI EC traffic, SystemMemory-backed H2RAM and PMC2 are distinct interfaces. The documented aperture maps host physical `0xFEEC2300..0xFEEC23FF` to EC XRAM `0x0300..0x03FF`. The candidate I2EC path at I/O `0x380` failed its recorded cross-check. [EC reference](docs/embedded-controller.md).
-- **Thermal interfaces:** recovered AML establishes `GFNS`, `GPFM`, `SPFM`, two telemetry fields and Fn+X dispatch. A recovered live capture correlates GFNS results with the two H2RAM `FNS0`/`FNS1` fields; the raw word is **not** promoted to calibrated RPM. The complete recorded `THMM` body includes Balance, Performance and LID ALIB sequences. September `SPFM` uses `0x94`/`0x95`; a recovered April source uses `0x91`/`0x92`, with exact same-session firmware association still unresolved. [Thermal reference](docs/thermal-performance.md).
-- **Firmware and setup:** the full identified static BIOS/HII audit is included: 8 formsets, 28 reachability rows, 151 SetupUtility questions/actions, 204 PBS and 416 CBS controls. Static defaults and presence are not live configuration or hardware-support evidence. A recovered photograph directly records the expanded SREP Boot page, while the exact successful patcher build/configuration remains unlinked. The two examined generic logo-update paths did not establish a supported logo-only update mechanism. [Firmware](docs/firmware-bios.md) · [Setup options](docs/bios-setup-options.md) · [Runtime visibility](docs/srep-runtime-reveal.md) · [Boot graphics](docs/boot-logo-research.md).
-- **Firmware access:** the retained PSP attribute reports ROM Armor enforcement. It does not establish every protection field or prove that all acquisition methods fail. H2OFFT embedded capabilities are separate from a live acquisition transcript. The exact private raw-ROM and EC source objects are located, but were not rehashed because raw-byte materialization was unavailable in the recovery audit. [Access evidence](docs/firmware-access.md) · [Artifact registry](docs/research-artifacts.md).
-- **ACPI and Linux:** direct `WMAA` evaluation returns a two-element package, not an unconditional flat 256-byte buffer. The September ACPI extraction/header capture is recovered, while raw `dsdt.dat` bytes/hash remain pending. The recorded Linux environment exposed battery telemetry but not generic charge-threshold attributes. [ACPI/WMI](docs/acpi-wmi.md) · [Linux](docs/linux.md).
-- **Audio and device enumeration:** the recovered Linux capture identifies ALC256, digital/stereo microphone endpoints, ACP/HDA bindings, loaded sound modules and two V4L2 entries named FHD Camera. A recovered `NahimicExport.zip` establishes Windows Nahimic/A-Volute application-level EQ preset tables and Realtek endpoint/APO integration. It does not establish the complete active DSP graph, amplifier programming or physical speaker topology. Logical interfaces likewise do not establish physical camera/speaker counts; standard `platform_profile` exposure remains unresolved. [Audio](docs/audio.md) · [Linux](docs/linux.md).
+### Battery charge control
+
+The EC battery policy uses two independently programmable thresholds. The validated `T1=85%`, `T2=90%` experiment produced three distinct regions:
+
+| SOC region | Observed behavior |
+|---|---|
+| `SOC < T1` | Charging permitted |
+| `T1 <= SOC <= T2` | Hold state; Linux settled at `Not charging` |
+| `SOC > T2` | Sustained multi-watt battery discharge while AC remained online |
+
+As SOC returned to the T2 region, sustained discharge was released and the machine settled back into hold. The earlier `80/100` result is consistent with an approximately-80% cap because the active-discharge region is effectively unreachable at `T2=100`.
+
+Additional observations:
+- a normal reboot retained the programmed state;
+- one later complete-battery-depletion event returned `Enabled=0`, `T1=0`, `T2=0` on the next powered session;
+- exact Linux-visible comparator timing, arbitrary threshold-pair behavior and the exact charger silicon remain unresolved.
+
+**References:** [Protocol](docs/battery-charge-limit.md) · [T1/T2 semantics](docs/battery-threshold-semantics.md) · [Raw validation](docs/validation.md) · [Power-loss observation](docs/battery-limit-power-loss-observation.md)
+
+### EC access architecture
+
+Three interfaces are documented separately:
+
+- standard ACPI EC traffic;
+- SystemMemory-backed H2RAM;
+- PMC2.
+
+The H2RAM aperture maps host physical `0xFEEC2300..0xFEEC23FF` to EC XRAM `0x0300..0x03FF`. The candidate I2EC path at I/O `0x380` failed its recorded cross-check.
+
+**Reference:** [EC architecture and registers](docs/embedded-controller.md)
+
+### Thermal interfaces
+
+Recovered AML establishes `GFNS`, `GPFM`, `SPFM`, two telemetry fields and Fn+X dispatch. A recovered live capture correlates GFNS results with H2RAM `FNS0`/`FNS1`.
+
+The complete recorded `THMM` body includes Balance, Performance and LID ALIB sequences. September `SPFM` uses `0x94`/`0x95`; a recovered April source uses `0x91`/`0x92`.
+
+**Evidence boundary:** the raw fan word is not promoted to calibrated RPM, and exact same-session firmware association for the two SPFM maps remains unresolved.
+
+**Reference:** [Thermal interfaces](docs/thermal-performance.md)
+
+### Firmware and setup
+
+The identified static BIOS/HII audit contains:
+
+- **8** formsets;
+- **28** reachability rows;
+- **151** SetupUtility questions/actions;
+- **204** PBS controls;
+- **416** CBS controls.
+
+A recovered photograph directly records the expanded SREP Boot page. The exact successful patcher build/configuration remains unlinked. The two examined generic logo-update paths did not establish a supported logo-only update mechanism.
+
+**Evidence boundary:** static defaults and option presence are not live configuration or hardware-support evidence.
+
+**References:** [Firmware](docs/firmware-bios.md) · [Setup options](docs/bios-setup-options.md) · [Runtime visibility](docs/srep-runtime-reveal.md) · [Boot graphics](docs/boot-logo-research.md)
+
+### Firmware access
+
+The retained PSP attribute reports ROM Armor enforcement. H2OFFT embedded capabilities are documented separately from any live acquisition transcript. The exact private raw-ROM and EC source objects are located, but were not rehashed because raw-byte materialization was unavailable in the recovery audit.
+
+**Evidence boundary:** the ROM Armor attribute does not establish every protection field or prove that all acquisition methods fail.
+
+**References:** [Access evidence](docs/firmware-access.md) · [Artifact registry](docs/research-artifacts.md)
+
+### ACPI and Linux
+
+Direct `WMAA` evaluation returns a two-element package rather than an unconditional flat 256-byte buffer. The September ACPI extraction/header capture is recovered. The recorded Linux environment exposed battery telemetry but not generic charge-threshold attributes.
+
+**Remaining evidence:** raw `dsdt.dat` bytes/hash are still pending.
+
+**References:** [ACPI/WMI](docs/acpi-wmi.md) · [Linux](docs/linux.md)
+
+### Audio and device enumeration
+
+The recovered Linux capture identifies:
+
+- Realtek ALC256;
+- digital/stereo microphone endpoints;
+- ACP/HDA bindings;
+- loaded sound modules;
+- two V4L2 entries named `FHD Camera`.
+
+A recovered `NahimicExport.zip` establishes Windows Nahimic/A-Volute application-level EQ preset tables and Realtek endpoint/APO integration.
+
+**Evidence boundary:** this does not establish the complete active DSP graph, amplifier programming or physical speaker topology. Logical interfaces likewise do not establish physical camera/speaker counts; standard `platform_profile` exposure remains unresolved.
+
+**References:** [Audio](docs/audio.md) · [Linux](docs/linux.md)
 
 ## Documentation map
 
