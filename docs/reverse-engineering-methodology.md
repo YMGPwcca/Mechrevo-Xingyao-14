@@ -28,6 +28,7 @@ Validation class and availability of the supporting source are independent prope
 | Class | Definition |
 |---|---|
 | **Live-confirmed** | A recorded observation or experiment on the identified unit supports the stated behavior or value. |
+| **Platform-confirmed** | An identified platform or model specification establishes the stated identity or specification for the documented platform without implying a separate live measurement. |
 | **Static-confirmed** | An identified firmware, ACPI, disassembly or source excerpt establishes the stated static property. |
 | **Artifact-confirmed** | Size, bytes, structure or digest was checked on an identified artifact. |
 | **Inferred** | An interpretation is supported by observations but is not fully established by a direct implementation or behavioral proof. |
@@ -36,7 +37,7 @@ Validation class and availability of the supporting source are independent prope
 | **Not established** | The retained evidence does not establish the proposition. A scoped absence is recorded as a result, not as a universal claim. |
 | **Not tested** | The specified operation or experiment was not performed in the retained record. |
 
-`Platform-confirmed` and `Static-confirmed + live-correlated` are historical descriptions found in the baseline. In the matrix they are represented by one canonical class, with the other support and its boundary recorded in the interpretation column. `Absent` is likewise not a ninth class: the matrix states what was absent, where, and what broader conclusion does not follow.
+`Platform-confirmed` is retained as a canonical class for identified platform/model specifications. Historical compound descriptions such as `Platform/live-confirmed` and `Static-confirmed + live-correlated` are normalized to the closest canonical class, with the additional support and its boundary recorded in the interpretation column. `Absent` is not a separate class: the matrix states what was absent, where, and what broader conclusion does not follow.
 
 ### Source coverage
 
@@ -371,7 +372,7 @@ This distinction prevents a common error: a behavioral result can be established
 
 The same boundary applies to setup, SREP and packages. An IFR control can be statically present while hidden at runtime; an SREP candidate can describe intended formset operations while its known-good session remains unconfirmed; an archive can contain H2OFFT help while no live `-g`, `-iv` or `-pq` invocation is established. A package hash confirms the measured bytes, not vendor authenticity, compatibility or safe execution.
 
-CPU model attribution is kept separate from topology: the canonical model is AMD Ryzen AI 9 365, while a stress output line reporting 20 workers is not independent proof of 10 physical cores / 20 logical CPUs. Audio attribution is likewise separate: ALC256 and logical FL/FR are recorded observations; four physical drivers remain a reported layout without an independent product or inspection source. AC-online battery telemetry is an electrical observation at the battery interface, not by itself a complete charger-topology characterization.
+CPU model attribution and topology use separate evidence: the documented processor is platform-confirmed as AMD Ryzen AI 9 365, while the 10-core / 20-thread topology comes from the identified processor's specification. The retained 20-worker stress invocation is workload configuration and is not used as topology evidence. Audio attribution is likewise separate: ALC256 and logical FL/FR are recorded observations; four physical drivers remain a reported layout without an independent product or inspection source. AC-online battery telemetry is an electrical observation at the battery interface, not by itself a complete charger-topology characterization.
 
 ## 15. Safety and publication boundaries
 
