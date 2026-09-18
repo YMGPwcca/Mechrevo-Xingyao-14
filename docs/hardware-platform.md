@@ -57,17 +57,7 @@ threads:  20
 iGPU:     Radeon 880M
 ```
 
-The integrated Radeon path used the ordinary AMD Linux graphics stack, and Wayland operation was reported on the documented machine. No P916F-specific graphics-firmware replacement or override was established as a requirement. This is not a certification of every graphics API, external output, suspend state or future kernel.
-
-The retained internal-panel resolution is:
-
-```text
-2880 × 1800
-```
-
-No refresh-rate value, panel model, EDID digest or adapter rating is published here because the investigation did not retain a correctly identified capture with equivalent evidence quality. These remain part of [P15](documentation-status.md#pending-evidence), not values to infer from a related laptop.
-
-The recovered [S11 device capture](research-sources.md#project-sources) includes the ALSA machine string `MECHREVO-XINGYAOSeries-Standard-XINGYAOSeries_P916F_STX`. Linux exposed two V4L2 device entries named FHD Camera, not an independently established two-camera physical layout. Digital and stereo microphone endpoint names are likewise logical interfaces. See [Linux inventory](linux.md#audio-and-peripheral-inventory) and [audio capture](audio.md#recovered-device-and-kernel-capture) for exact observations and PCI driver bindings.
+The Radeon 880M used the ordinary AMD Linux graphics stack, with Wayland operation reported on the documented machine. No P916F-specific graphics-firmware replacement or override was identified.
 
 ## Installed storage observation
 
@@ -80,6 +70,9 @@ YMTC PC41Q-1TB-B
 This is a live inventory observation for the investigated unit. It does not establish the storage configuration shipped with every Xingyao 14 / P916F-STX variant and does not replace a complete NVMe identify dump. Controller firmware revision, namespace details, health state and serial identity are intentionally not inferred from the model string.
 
 ## Internal display
+
+The documented internal-panel resolution is **2880 × 1800**.
+
 ### BGRT placement
 
 After the recorded BIOS 1.15 update, Linux exposed the following ACPI BGRT metadata:
