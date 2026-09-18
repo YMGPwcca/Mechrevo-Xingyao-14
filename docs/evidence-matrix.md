@@ -6,12 +6,12 @@ Canonical class definitions and coverage terms are maintained in [`reverse-engin
 
 ## Baseline claims — platform and firmware
 
-Scope shorthand: `P916F-STX / BIOS 1.15` means the identified unit and tested firmware scope unless a row states otherwise. The baseline's `Platform-confirmed`, `Platform/live-confirmed`, `Static-confirmed + live-correlated` and `Static-confirmed only` descriptions are represented by one canonical class; the interpretation column preserves the additional qualification.
+Scope shorthand: `P916F-STX / BIOS 1.15` means the identified unit and tested firmware scope unless a row states otherwise. `Platform-confirmed` is retained for identified platform/model specifications. Historical compound labels such as `Platform/live-confirmed`, `Static-confirmed + live-correlated` and `Static-confirmed only` are normalized to the closest canonical class, with the additional qualification preserved in the interpretation column.
 
 | ID | Claim | Platform / firmware scope | Evidence class | Source coverage | Source | Interpretation / boundary |
 |---|---|---|---|---|---|---|
 | BASE-001 | Product/platform is MECHREVO Xingyao 14 / `P916F-STX` | Documented unit | Live-confirmed | Retained report only | S1 · [platform identity](hardware-platform.md#platform-identity) · [source register](research-sources.md#project-sources) | Firmware/OS identity is recorded for this unit; do not generalize to other P916F family variants. |
-| BASE-002 | CPU is AMD Ryzen AI 9 365 | Documented unit | Comparative only | Retained report only | S1 · [CPU/graphics platform](hardware-platform.md#cpu--graphics-platform) | Canonical model naming is retained from the platform reference and AMD specification; the 20-worker stress line is not independent topology proof. |
+| BASE-002 | CPU is AMD Ryzen AI 9 365 | Documented unit | Platform-confirmed | Retained report only | S1 · [CPU/graphics platform](hardware-platform.md#cpu--graphics-platform) | Baseline platform identity with AMD official model naming; this claim does not depend on the stress-worker count. |
 | BASE-003 | iGPU is Radeon 880M | Documented unit | Live-confirmed | Retained report only | S1 · [CPU/graphics platform](hardware-platform.md#cpu--graphics-platform) | AMD specification is comparative corroboration; the machine observation supplies the platform scope. |
 | BASE-004 | Memory is 32 GiB on the documented unit | Documented unit | Live-confirmed | Retained report only | S1 · [platform identity](hardware-platform.md#platform-identity) | No claim about other configurations or upgradeability is implied. |
 | BASE-005 | Internal panel is 2880×1800 | Documented unit | Live-confirmed | Retained report only | S1 · [internal display](hardware-platform.md#internal-display) | Resolution is retained; an unretained refresh rate is not inferred. |
