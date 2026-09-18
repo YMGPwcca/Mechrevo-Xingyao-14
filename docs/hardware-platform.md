@@ -125,39 +125,17 @@ A recovered live capture now correlates GFNS queries with the changing H2RAM val
 
 ## Battery and adapter
 
-Linux exposed the following power-supply objects:
+| Item | Observed value |
+|---|---|
+| Battery object | `/sys/class/power_supply/LCBT` |
+| AC adapter object | `/sys/class/power_supply/ACAD` |
+| Battery model | `588974-3S-G-A0` |
 
-```text
-Battery: /sys/class/power_supply/LCBT
-AC:      /sys/class/power_supply/ACAD
-```
+Observed battery attributes include `capacity`, `status`, `voltage_now`, `power_now`, `energy_now` and `model_name`.
 
-The observed battery model string was:
+The `LCBT` device does not expose the generic `charge_control_start_threshold`, `charge_control_end_threshold` or `charge_behaviour` attributes. Charge limiting is instead implemented by the EC PMC2 subsystem documented in [battery charge control](battery-charge-limit.md).
 
-```text
-588974-3S-G-A0
-```
-
-Recorded telemetry included:
-
-```text
-capacity
-status
-voltage_now
-power_now
-energy_now
-model_name
-```
-
-The observed `LCBT` device did not expose the usual generic threshold attributes:
-
-```text
-charge_control_start_threshold
-charge_control_end_threshold
-charge_behaviour
-```
-
-The firmware nevertheless contains a charge-limit subsystem reached through the EC PMC2 command family. The behavioral meaning of both thresholds is now established on the investigated unit: T1 is the lower charge/hold boundary, while T2 is the upper boundary of an active-discharge region. In the validated 85/90 experiment, the machine charged below T1, held between the thresholds, and discharged the battery at multi-watt power above T2 despite AC remaining online. Returning to the T2 region released the sustained discharge. The earlier 80/100 configuration is now understood as a practical charge-cap policy whose `SOC > 100` active-discharge region is effectively unreachable. Behavior for arbitrary threshold pairs, exact comparator timing and the exact charger silicon remain unresolved. See [`linux.md`](linux.md), [`battery-charge-limit.md`](battery-charge-limit.md) and [`battery-threshold-semantics.md`](battery-threshold-semantics.md).
+On the investigated unit, T1 is the lower charge/hold boundary and T2 is the upper boundary of the active-discharge region. The validated 85/90 experiment established charging below T1, hold between T1 and T2, and sustained battery discharge above T2 while AC remained online. Detailed traces and remaining electrical questions are kept in [T1/T2 semantics](battery-threshold-semantics.md) and [validation](validation.md).
 
 ## Audio hardware
 
