@@ -9,9 +9,9 @@ This reference describes the investigated MECHREVO Xingyao 14 / `P916F-STX` unit
 | Product | MECHREVO Xingyao 14 / 机械革命 星耀14 | Live-confirmed | Retained machine-identification report |
 | Board/platform | `P916F-STX` | Live-confirmed | Retained machine-identification report |
 | Full platform string | `MECHREVO XINGYAO Series-P916F-STX` | Live-confirmed | Recorded firmware/OS identity |
-| Processor | AMD Ryzen AI 9 365 | Comparative only | Canonical model attribution retained from the baseline platform specification; not independently established by the stress-worker count |
-| Processor family | AMD Strix Point / Ryzen AI 300 | Comparative only | Model-family attribution; not a substitute for the exact machine identity |
-| Processor topology | 10 cores / 20 threads | Comparative only | Model specification; a 20-worker stress invocation is not independent topology evidence |
+| Processor | AMD Ryzen AI 9 365 | Platform-confirmed | Baseline platform identification; AMD official model naming |
+| Processor family | AMD Strix Point / Ryzen AI 300 | Platform-confirmed | Processor-family attribution for the identified CPU |
+| Processor topology | 10 cores / 20 threads | Platform-confirmed | AMD official specification for Ryzen AI 9 365 |
 | Integrated graphics | Radeon 880M | Live-confirmed | Platform and Linux observation |
 | Installed memory | 32 GiB | Live-confirmed | Observed configuration of the documented unit |
 | Installed storage | `YMTC PC41Q-1TB-B` | Live-confirmed | Exact-machine Linux boot/device capture; model of the installed SSD, not a universal product specification |
@@ -29,7 +29,7 @@ This reference describes the investigated MECHREVO Xingyao 14 / `P916F-STX` unit
 
 The BIOS date remains `05/07/2026`; no date-format conversion is asserted.
 
-The processor identity used throughout this repository is **AMD Ryzen AI 9 365**. The baseline stress output records 20 CPU workers because that was the selected workload, not because the worker count independently measured 10 physical cores and 20 logical CPUs.
+The processor identity used throughout this repository is **AMD Ryzen AI 9 365**. The 10-core / 20-thread topology comes from the identified processor's specification; the retained 20-worker stress invocation is workload configuration and is not used as topology evidence.
 
 ## Firmware version identifiers
 
