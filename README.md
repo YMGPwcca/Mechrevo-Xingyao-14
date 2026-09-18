@@ -19,11 +19,11 @@ Offline file inspection does not access the laptop. Hardware state queries may s
 | Product | MECHREVO Xingyao 14 / 机械革命 星耀14 |
 | Platform string | `MECHREVO XINGYAO Series-P916F-STX` |
 | Processor | AMD Ryzen AI 9 365, Strix Point |
-| Processor topology | 10 cores / 20 threads, retained platform specification |
+| Processor topology | 10 cores / 20 threads |
 | Integrated graphics | Radeon 880M |
 | Installed memory | 32 GiB on the investigated unit |
 | Installed storage | `YMTC PC41Q-1TB-B` on the investigated unit |
-| Internal display | 2880 × 1800; exact refresh-rate evidence pending |
+| Internal display | 2880 × 1800 |
 | System BIOS | `1.15` |
 | Firmware-reported EC | `1.15` |
 | BIOS build-date string | `05/07/2026`; date format not converted |

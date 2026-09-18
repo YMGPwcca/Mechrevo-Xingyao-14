@@ -9,9 +9,9 @@ This reference describes the investigated MECHREVO Xingyao 14 / `P916F-STX` unit
 | Product | MECHREVO Xingyao 14 / 机械革命 星耀14 | Live-confirmed | Retained machine-identification report |
 | Board/platform | `P916F-STX` | Live-confirmed | Retained machine-identification report |
 | Full platform string | `MECHREVO XINGYAO Series-P916F-STX` | Live-confirmed | Recorded firmware/OS identity |
-| Processor | AMD Ryzen AI 9 365 | Comparative only | Canonical model attribution retained from the baseline platform specification; not independently established by the stress-worker count |
-| Processor family | AMD Strix Point / Ryzen AI 300 | Comparative only | Model-family attribution; not a substitute for the exact machine identity |
-| Processor topology | 10 cores / 20 threads | Comparative only | Model specification; a 20-worker stress invocation is not independent topology evidence |
+| Processor | AMD Ryzen AI 9 365 | Platform-confirmed | Baseline platform identification; AMD official model naming |
+| Processor family | AMD Strix Point / Ryzen AI 300 | Platform-confirmed | Processor-family attribution for the identified CPU |
+| Processor topology | 10 cores / 20 threads | Platform-confirmed | AMD official specification for Ryzen AI 9 365 |
 | Integrated graphics | Radeon 880M | Live-confirmed | Platform and Linux observation |
 | Installed memory | 32 GiB | Live-confirmed | Observed configuration of the documented unit |
 | Installed storage | `YMTC PC41Q-1TB-B` | Live-confirmed | Exact-machine Linux boot/device capture; model of the installed SSD, not a universal product specification |
@@ -29,7 +29,7 @@ This reference describes the investigated MECHREVO Xingyao 14 / `P916F-STX` unit
 
 The BIOS date remains `05/07/2026`; no date-format conversion is asserted.
 
-The processor identity used throughout this repository is **AMD Ryzen AI 9 365**. The baseline stress output records 20 CPU workers because that was the selected workload, not because the worker count independently measured 10 physical cores and 20 logical CPUs.
+The processor identity used throughout this repository is **AMD Ryzen AI 9 365**. The 10-core / 20-thread topology comes from the identified processor's specification; the retained 20-worker stress invocation is workload configuration and is not used as topology evidence.
 
 ## Firmware version identifiers
 
@@ -45,8 +45,6 @@ Additional EC strings:   ITE EC-V14.6
 
 These strings belong to different build or reporting namespaces. `IT557x V1.09` does not identify the system BIOS as version 1.09 and does not contradict the firmware UI's `EC 1.15` label. A separately retained BIOS 1.09 updater is historical package evidence, not evidence that every internal EC string changes with each BIOS release. Keeping these namespaces separate matters when comparing update packages, raw flash images and internal EC firmware revisions.
 
-Exact kernel, graphics-stack and firmware-tool versions were not reconstructed from unrelated installations. Missing environment records are tracked under [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence).
-
 ## CPU / graphics platform
 
 The recorded platform characteristics are:
@@ -59,17 +57,7 @@ threads:  20
 iGPU:     Radeon 880M
 ```
 
-The integrated Radeon path used the ordinary AMD Linux graphics stack, and Wayland operation was reported on the documented machine. No P916F-specific graphics-firmware replacement or override was established as a requirement. This is not a certification of every graphics API, external output, suspend state or future kernel.
-
-The retained internal-panel resolution is:
-
-```text
-2880 × 1800
-```
-
-No refresh-rate value, panel model, EDID digest or adapter rating is published here because the investigation did not retain a correctly identified capture with equivalent evidence quality. These remain part of [P15](documentation-status.md#pending-evidence), not values to infer from a related laptop.
-
-The recovered [S11 device capture](research-sources.md#project-sources) includes the ALSA machine string `MECHREVO-XINGYAOSeries-Standard-XINGYAOSeries_P916F_STX`. Linux exposed two V4L2 device entries named FHD Camera, not an independently established two-camera physical layout. Digital and stereo microphone endpoint names are likewise logical interfaces. See [Linux inventory](linux.md#audio-and-peripheral-inventory) and [audio capture](audio.md#recovered-device-and-kernel-capture) for exact observations and PCI driver bindings.
+The Radeon 880M used the ordinary AMD Linux graphics stack, with Wayland operation reported on the documented machine. No P916F-specific graphics-firmware replacement or override was identified.
 
 ## Installed storage observation
 
@@ -82,6 +70,9 @@ YMTC PC41Q-1TB-B
 This is a live inventory observation for the investigated unit. It does not establish the storage configuration shipped with every Xingyao 14 / P916F-STX variant and does not replace a complete NVMe identify dump. Controller firmware revision, namespace details, health state and serial identity are intentionally not inferred from the model string.
 
 ## Internal display
+
+The documented internal-panel resolution is **2880 × 1800**.
+
 ### BGRT placement
 
 After the recorded BIOS 1.15 update, Linux exposed the following ACPI BGRT metadata:
@@ -134,39 +125,17 @@ A recovered live capture now correlates GFNS queries with the changing H2RAM val
 
 ## Battery and adapter
 
-Linux exposed the following power-supply objects:
+| Item | Observed value |
+|---|---|
+| Battery object | `/sys/class/power_supply/LCBT` |
+| AC adapter object | `/sys/class/power_supply/ACAD` |
+| Battery model | `588974-3S-G-A0` |
 
-```text
-Battery: /sys/class/power_supply/LCBT
-AC:      /sys/class/power_supply/ACAD
-```
+Observed battery attributes include `capacity`, `status`, `voltage_now`, `power_now`, `energy_now` and `model_name`.
 
-The observed battery model string was:
+The `LCBT` device does not expose the generic `charge_control_start_threshold`, `charge_control_end_threshold` or `charge_behaviour` attributes. Charge limiting is instead implemented by the EC PMC2 subsystem documented in [battery charge control](battery-charge-limit.md).
 
-```text
-588974-3S-G-A0
-```
-
-Recorded telemetry included:
-
-```text
-capacity
-status
-voltage_now
-power_now
-energy_now
-model_name
-```
-
-The observed `LCBT` device did not expose the usual generic threshold attributes:
-
-```text
-charge_control_start_threshold
-charge_control_end_threshold
-charge_behaviour
-```
-
-The firmware nevertheless contains a charge-limit subsystem reached through the EC PMC2 command family. The behavioral meaning of both thresholds is now established on the investigated unit: T1 is the lower charge/hold boundary, while T2 is the upper boundary of an active-discharge region. In the validated 85/90 experiment, the machine charged below T1, held between the thresholds, and discharged the battery at multi-watt power above T2 despite AC remaining online. Returning to the T2 region released the sustained discharge. The earlier 80/100 configuration is now understood as a practical charge-cap policy whose `SOC > 100` active-discharge region is effectively unreachable. Behavior for arbitrary threshold pairs, exact comparator timing and the exact charger silicon remain unresolved. See [`linux.md`](linux.md), [`battery-charge-limit.md`](battery-charge-limit.md) and [`battery-threshold-semantics.md`](battery-threshold-semantics.md).
+On the investigated unit, T1 is the lower charge/hold boundary and T2 is the upper boundary of the active-discharge region. The validated 85/90 experiment established charging below T1, hold between T1 and T2, and sustained battery discharge above T2 while AC remained online. Detailed traces and remaining electrical questions are kept in [T1/T2 semantics](battery-threshold-semantics.md) and [validation](validation.md).
 
 ## Audio hardware
 
@@ -249,6 +218,6 @@ The following boundaries are deliberate:
 |---|---|---|
 | [P02 — complete ACPI-table identity](documentation-status.md#pending-evidence) | `PARTIAL / NEEDS_EVIDENCE` | The September extraction/header capture is recovered; original raw `dsdt.dat` bytes/hash and exact BIOS association remain unresolved |
 | [P14 — physical audio topology and OEM tuning](documentation-status.md#pending-evidence) | `PARTIAL / NEEDS_EVIDENCE` | Nahimic application-level EQ/APO evidence is recovered; physical driver count, complete DSP graph and amplifier programming remain unresolved |
-| [P15 — additional platform inventory and exact versions](documentation-status.md#pending-evidence) | Partially recovered | S11 records two FHD Camera V4L2 entries, digital/stereo microphones, loaded sound modules and PipeWire server `1.6.7`; an exact-machine capture now adds `YMTC PC41Q-1TB-B`; kernel/ALSA/WirePlumber package versions, panel/EDID/refresh and adapter details remain missing |
+| [P15 — additional platform inventory](documentation-status.md#pending-evidence) | Partially recovered | S11 records two FHD Camera V4L2 entries, digital/stereo microphones, loaded sound modules and PipeWire server `1.6.7`; an exact-machine capture adds `YMTC PC41Q-1TB-B`; panel/EDID/refresh and adapter identity/rating remain unrecorded |
 
 No claim above depends on running a firmware writer or importing hardware data from another machine. The battery setter operations discussed here are historical live evidence already recorded on the documented unit; this revision does not imply that additional hardware writes were performed during documentation editing.

@@ -168,7 +168,7 @@ No retained evidence establishes that the machine requires a user-visible four-c
 
 ### Recovered device and kernel capture
 
-Source [S11](research-sources.md#project-sources), `Pasted text(71).txt`, records the following Linux interfaces. These are observations from that capture, not a new hardware test or a universal device configuration.
+Source [S11](research-sources.md#project-sources) records the following Linux interfaces. These are observations from that capture, not a new hardware test or a universal device configuration.
 
 | Layer | Captured observation | Boundary |
 |---|---|---|

@@ -339,7 +339,7 @@ The sequence is an AML notification-order observation. It is not a timing guaran
 The historical source discrepancy is no longer merely a source locator. S6 now contains two recovered records:
 
 ```text
-Pasted text(16).txt
+S6 April text source
   size:      7465 bytes
   SHA-256:   21d40ec647d5859a2b6feb19ec206dd296eaba45666d7d3e8bc4b17da5966d34
 
