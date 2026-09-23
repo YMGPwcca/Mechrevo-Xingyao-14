@@ -46,6 +46,25 @@ normal reboot -> state 1 / T1 80 / T2 100 retained
 battery-depletion full-power-loss event -> state 0 / T1 0 / T2 0 observed afterward
 ```
 
+
+## Cross-OS retention observation
+
+A later owner-observed transition adds a separate persistence case: after the charge limit had been configured under Linux, the machine was booted into Windows and the limit behavior remained active.
+
+This is useful because it separates the feature from the originating operating system. The observation is consistent with the limit state being maintained below the Linux userspace layer, for example by EC/firmware state, rather than by a Linux-only process that must remain running.
+
+The retained report does **not** include a Windows-side PMC2 readback of `Enabled`, `T1` and `T2`. It therefore establishes behavioral cross-OS retention, not byte-for-byte confirmation that the exact threshold fields were unchanged while Windows was running. It also does not identify the physical storage medium or prove that every reboot/shutdown path with standby power will retain the state.
+
+The combined observed persistence pattern is now:
+
+```text
+normal reboot -> programmed state retained
+Linux -> Windows boot transition -> limit behavior retained
+battery-depletion full-system-power-loss event -> state 0 / T1 0 / T2 0 observed afterward
+```
+
+This strengthens the distinction between ordinary OS/reboot transitions and the recorded deep power-loss event, while leaving the exact clearing transition and storage mechanism unresolved.
+
 ## Boundaries
 
 This observation establishes behavior, not the persistence mechanism. It does not determine when the values were cleared or whether clearing occurred during battery depletion, an EC brownout/reset, firmware initialization on the next power-on, or another transition associated with the event.
