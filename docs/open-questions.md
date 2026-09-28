@@ -16,7 +16,7 @@ The following remain unresolved:
 - EC SOC polling cadence, fuel-gauge update cadence and their relationship to Linux `capacity` refresh timing.
 - Exact hysteresis width, if any, beyond the observed three-region boundaries.
 - The exact transition that cleared the battery-limit fields during the recorded battery-depletion full-power-loss event: depletion/brownout, an EC reset, firmware initialization on the next power-on, or another event-associated transition.
-- Whether other power-loss classes such as battery disconnect, CMOS/RTC-power removal, explicit EC reset, firmware update or other G3 entries produce the same clearing behavior.
+- Whether power-loss classes beyond the now-tested normal shutdown and AC-removal cases — such as physical battery disconnect, CMOS/RTC-power removal, explicit EC reset, firmware update or other G3 entries — produce the same clearing behavior. Normal shutdown and AC removal with the internal battery still connected retained `1/85/90` in the recorded owner tests.
 - Storage mechanism responsible for persistence across a normal reboot and loss across the recorded depletion event.
 - Whether the statically identified `0xF1 0x10` reset/disable path has the expected user-facing rollback behavior; its clearing logic is not a live rollback result.
 - Complete response, error, timeout, stale-output and concurrency contract for PMC2 charge-control transactions.
