@@ -404,7 +404,7 @@ T1    = 80
 T2    = 100
 ```
 
-A later owner-observed OS transition adds another retained-state case: after the limit had been configured under Linux, booting into Windows left the charge-limit behavior active. No Windows-side PMC2 `Enabled/T1/T2` readback was retained, so this is behavioral evidence of cross-OS persistence rather than exact field readback. It supports the conclusion that the active policy is not dependent on a Linux userspace process remaining alive, but it does not establish the exact EC storage mechanism.
+A later OS-transition test adds another retained-state case: after the `85/90` policy had been configured under Linux, the machine was booted into Windows and queried directly through the same PMC2 getter family. Windows-side readback returned `Enabled=1`, `T1=85 (0x55)`, `T2=90 (0x5A)`. This is direct live confirmation that the PMC2-visible fields persisted across the tested Linux-to-Windows transition, not merely behavioral inference from charging status. It rules out a Linux-userspace-only persistence mechanism for this transition, but it does not establish the exact EC storage medium or behavior for every reset/power-loss class.
 
 A later battery-depletion event caused complete system power loss. On the next powered session:
 
