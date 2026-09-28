@@ -74,6 +74,40 @@ battery-depletion full-system-power-loss event -> state 0 / T1 0 / T2 0 observed
 
 This strengthens the distinction between ordinary OS/reboot transitions and the recorded deep power-loss event, while leaving the exact clearing transition and storage mechanism unresolved.
 
+## Shutdown and AC-removal retention
+
+Two additional owner-reported persistence tests were completed with the `85/90` policy. In both cases, the post-transition PMC2 readback still returned the programmed state:
+
+```text
+Enabled = 1
+T1      = 85
+T2      = 90
+```
+
+The tested transitions were:
+
+```text
+normal shutdown with AC still connected
+    -> 1 / 85 / 90 retained
+
+normal shutdown, AC removed while the internal battery remained connected
+    -> 1 / 85 / 90 retained
+```
+
+No verbatim console capture was retained for these two runs, so they are recorded as owner-reported live results rather than full-capture evidence.
+
+Together with the normal-reboot, Linux-to-Windows PMC2 readback and depletion result, the observed pattern is now:
+
+```text
+normal reboot                                      -> retained
+Linux -> Windows boot transition                   -> retained
+normal shutdown with AC connected                  -> retained
+normal shutdown + AC removed, internal battery on  -> retained
+battery-depletion full-system-power-loss event     -> cleared to 0 / 0 / 0
+```
+
+For the tested cases, removal of the AC adapter is therefore not sufficient to clear the battery-limit state while the internal battery remains connected. The exact storage mechanism and the exact event that clears the state during deep power loss remain unresolved.
+
 ## Boundaries
 
 This observation establishes behavior, not the persistence mechanism. It does not determine when the values were cleared or whether clearing occurred during battery depletion, an EC brownout/reset, firmware initialization on the next power-on, or another transition associated with the event.
