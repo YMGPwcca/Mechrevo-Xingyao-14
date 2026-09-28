@@ -406,6 +406,8 @@ T2    = 100
 
 A later OS-transition test adds another retained-state case: after the `85/90` policy had been configured under Linux, the machine was booted into Windows and queried directly through the same PMC2 getter family. Windows-side readback returned `Enabled=1`, `T1=85 (0x55)`, `T2=90 (0x5A)`. This is direct live confirmation that the PMC2-visible fields persisted across the tested Linux-to-Windows transition, not merely behavioral inference from charging status. It rules out a Linux-userspace-only persistence mechanism for this transition, but it does not establish the exact EC storage medium or behavior for every reset/power-loss class.
 
+Two additional owner-reported tests further narrow the persistence boundary. With the `85/90` policy programmed, a normal shutdown with AC still connected retained `1/85/90`; a separate normal shutdown followed by AC removal while the internal battery remained connected also retained `1/85/90` on the next PMC2 readback. These runs were reported without verbatim console capture, so they establish the tested outcomes but do not provide independently inspectable raw transcripts. In the tested cases, AC removal alone was therefore insufficient to clear the state while the internal battery remained connected.
+
 A later battery-depletion event caused complete system power loss. On the next powered session:
 
 ```text
