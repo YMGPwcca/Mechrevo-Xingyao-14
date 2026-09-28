@@ -51,15 +51,24 @@ battery-depletion full-power-loss event -> state 0 / T1 0 / T2 0 observed afterw
 
 A later owner-observed transition adds a separate persistence case: after the charge limit had been configured under Linux, the machine was booted into Windows and the limit behavior remained active.
 
-This is useful because it separates the feature from the originating operating system. The observation is consistent with the limit state being maintained below the Linux userspace layer, for example by EC/firmware state, rather than by a Linux-only process that must remain running.
+The state was then queried directly from Windows through the same ITE PMC2 battery-limit getter family. The retained Windows-side output was:
 
-The retained report does **not** include a Windows-side PMC2 readback of `Enabled`, `T1` and `T2`. It therefore establishes behavioral cross-OS retention, not byte-for-byte confirmation that the exact threshold fields were unchanged while Windows was running. It also does not identify the physical storage medium or prove that every reboot/shutdown path with standby power will retain the state.
+```text
+=== P916F-STX Battery Limit / Windows PMC2 ===
+Enabled : 1 (ON)
+T1      : 85% (0x55)
+T2      : 90% (0x5A)
+```
+
+This is **Live-confirmed** evidence that the exact PMC2-visible charge-limit fields remained programmed across the Linux-to-Windows transition. The result rules out a Linux-userspace-only persistence mechanism for this tested transition.
+
+The observation still does not identify the physical storage medium, prove that the values are held only in volatile EC SRAM, or establish that every reboot/shutdown path with standby power will retain the state.
 
 The combined observed persistence pattern is now:
 
 ```text
 normal reboot -> programmed state retained
-Linux -> Windows boot transition -> limit behavior retained
+Linux -> Windows boot transition -> PMC2 readback retained 1 / 85 / 90
 battery-depletion full-system-power-loss event -> state 0 / T1 0 / T2 0 observed afterward
 ```
 
