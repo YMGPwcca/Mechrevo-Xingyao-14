@@ -552,3 +552,30 @@ The result is stronger than behavioral observation alone because the EC-facing g
 
 The result does **not** identify the physical storage medium, prove that the fields reside only in volatile EC SRAM, or establish persistence across every shutdown, G3, battery-disconnect, EC-reset, firmware-update or other power-loss class. The separately recorded battery-depletion full-system-power-loss event still provides the observed counterexample in which the next powered session returned `0/0/0`.
 
+## 21. Shutdown and AC-removal persistence
+
+Two additional persistence tests were owner-reported after the `85/90` state had already been established.
+
+Test C:
+
+```text
+normal shutdown
+AC remains connected
+next PMC2 readback -> Enabled=1 / T1=85 / T2=90
+```
+
+Test D:
+
+```text
+normal shutdown
+AC removed after shutdown
+internal battery remains connected
+next PMC2 readback -> Enabled=1 / T1=85 / T2=90
+```
+
+These results establish that the programmed state survived both tested shutdown paths and that AC removal alone was not sufficient to clear the state while the internal battery remained connected.
+
+No verbatim console transcript was supplied for these two runs, so this section records owner-reported live outcomes rather than full-capture evidence. The separately retained depletion capture remains the counterexample: after battery depletion caused complete system power loss, the next observed state was `0/0/0`.
+
+The combined evidence supports a bounded persistence statement: the charge-limit state survives ordinary reboot/OS/shutdown transitions and AC removal in the tested cases, but it has been observed to clear after a deep battery-depletion power-loss event. The exact storage medium and exact clearing transition remain unestablished.
+
