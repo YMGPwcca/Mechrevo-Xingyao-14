@@ -528,3 +528,27 @@ power_now=0 proves the adapter supplies every instantaneous system watt
 The disable/reset path `0xF1 0x10` remains static-confirmed only. The post-depletion `0/0/0` state does not prove that this handler executed or that the fields are necessarily stored only in volatile SRAM.
 
 The behavioral meaning of T2 is no longer unresolved: the 85/90 experiment live-confirms it as the upper boundary of the active-discharge region on the investigated P916F-STX.
+
+## 20. Windows-side cross-OS PMC2 readback
+
+After the `85/90` battery-limit policy had been configured under Linux and the machine was booted into Windows, the same PMC2 getter family was queried directly from Windows. The retained console output was:
+
+```text
+=== P916F-STX Battery Limit / Windows PMC2 ===
+Enabled : 1 (ON)
+T1      : 85% (0x55)
+T2      : 90% (0x5A)
+```
+
+This is direct live evidence that the PMC2-visible charge-limit fields survived the tested Linux-to-Windows transition unchanged:
+
+```text
+Enabled = 1
+T1      = 85
+T2      = 90
+```
+
+The result is stronger than behavioral observation alone because the EC-facing getters returned the exact programmed fields while Windows was running. It establishes cross-OS persistence for this tested transition and rules out a Linux-userspace-only persistence mechanism.
+
+The result does **not** identify the physical storage medium, prove that the fields reside only in volatile EC SRAM, or establish persistence across every shutdown, G3, battery-disconnect, EC-reset, firmware-update or other power-loss class. The separately recorded battery-depletion full-system-power-loss event still provides the observed counterexample in which the next powered session returned `0/0/0`.
+
